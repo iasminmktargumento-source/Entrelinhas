@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrelinhas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=Special+Elite&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Cinzel:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7c5ce6">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Entrelinhas">
+</head>
+<body>
+<!-- Filtro de refração do liquid glass (Chromium); nos outros navegadores o vidro fica fosco -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lg-refract" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="11" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="2.4" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="42" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<canvas id="atmo" aria-hidden="true"></canvas>
+<div id="wall" aria-hidden="true"></div>
+<div id="app">
+  <div class="boot glass" id="boot">
+    <div class="boot-mark">Entrelinhas</div>
+    <div class="boot-sub">Abrindo seus livros…</div>
+  </div>
+</div>
+<div id="layer-float"></div>
+<div id="layer-modal"></div>
+<div id="layer-toast" aria-live="polite"></div>
+
+<script src="js/core.js"></script>
+<script src="js/store.js"></script>
+<script src="js/bigfiles.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/atmo.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/narr.js"></script>
+<script src="js/versions.js"></script>
+<script src="js/synonyms.js"></script>
+<script src="js/gdocs.js"></script>
+<script src="js/comments.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/views.js"></script>
+<script src="js/names.js"></script>
+<script src="js/warmup.js"></script>
+<script src="js/buddy.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/wiki.js"></script>
+<script src="js/relations.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/lang.js"></script>
+<script src="js/cal.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/mapstamps.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/maps3d.js"></script>
+<script src="js/book.js"></script>
+<script src="js/mood.js"></script>
+<script src="js/radio.js"></script>
+<script src="js/tesauro.js"></script>
+<script src="js/hub.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
