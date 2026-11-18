@@ -1747,14 +1747,15 @@
       function done(){
         if (stopScene) stopScene(); if (stopLayers) stopLayers(); stopLive(); offV(); document.removeEventListener('keydown', onKey); prose.removeEventListener('keydown', onKeyIdle); prose.removeEventListener('input', follow);
         prose.style.color = ''; prose.style.textShadow = ''; prose.style.caretColor = '';
-        try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {}
+        try { if (document.fullscreenElement && !wasFull) document.exitFullscreen().catch(() => {}); } catch (e) {}
         wrap.remove(); onClose && onClose();
       }
       close.onclick = done;
       setBg(); setLayers(); style(); buildTools(); wake();
       if (onMount) onMount(wrap, sc, () => buildTools());
       // tela cheia na página inteira, para menus, avisos e janelas aparecerem por cima da composição
-      try { const de = document.documentElement; de.requestFullscreen && de.requestFullscreen().catch(() => {}); } catch (e) {}
+      const wasFull = !!document.fullscreenElement;
+      try { const de = document.documentElement; if (!wasFull) de.requestFullscreen && de.requestFullscreen().catch(() => {}); } catch (e) {}
       setTimeout(() => { prose.focus(); const r = document.createRange(); const last = prose.querySelector('section:last-of-type'); if (last) { r.selectNodeContents(last); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } }, 50);
     }
   };

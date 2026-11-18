@@ -80,7 +80,7 @@
           h('button.btn.primary.hx-cta', { onclick: () => Shell.projectModal() }, icon('plus'), 'Novo livro'),
           last ? h('button.btn.hx-ghost', { onclick: () => Shell.openProject(last.id) }, icon('pen'), 'Continuar “' + (last.title || 'Sem título') + '”') : null,
           h('button.btn.hx-ghost', { onclick: importBackup, title: 'Importar um backup' }, icon('upload'), 'Importar'),
-          T.iconBtn('gear', 'Ajustes', () => Shell.settings(), '.hx-ic')),
+          T.Full.btn('.hx-ic'), T.iconBtn('gear', 'Ajustes', () => Shell.settings(), '.hx-ic')),
         T.STANDALONE ? h('div.hx-solo.glass', icon('home'), h('div', h('b', 'Versão independente do Entrelinhas'), h('p', 'Seus livros ficam guardados neste navegador, neste aparelho. Para trazer os livros do Claude: lá, abra Ajustes › Backup › “Backup de todos os livros”; aqui, toque em Importar. Faça backups de vez em quando (o lembrete avisa). Sinônimos, gerador de nomes e outras funções que usam o Claude só funcionam na versão do claude.ai.'))) : null),
       );
     const side = h('div.hx-side',
@@ -323,8 +323,10 @@
       menuBtn('wall', 'Visual', 'Papéis de parede, claro ou escuro, ajustes', () => [
         { label: 'Papéis de parede…', icon: 'wall', fn: () => Shell.wallModal() },
         { label: dark ? 'Mudar para modo claro' : 'Mudar para modo escuro', icon: dark ? 'sun' : 'moon', fn: () => { S().setPrefs({ theme: dark ? 'light' : 'dark' }); Shell.applyTheme(); Shell.renderTop(); T.toast(dark ? 'Modo claro.' : 'Modo escuro.'); } },
+        { label: T.Full.on() ? 'Sair da tela cheia' : 'Tela cheia', icon: 'focus', fn: () => T.Full.toggle() },
+        { label: (S().prefs().autoFull ? '✓ ' : '') + 'Abrir sempre em tela cheia (no primeiro clique)', icon: 'focus', fn: () => { const v = !S().prefs().autoFull; S().setPrefs({ autoFull: v }); T.toast(v ? 'Combinado: ao abrir o Entrelinhas, o primeiro clique já deixa tudo em tela cheia.' : 'Tela cheia automática desligada.'); if (v && !T.Full.on()) T.Full.toggle(); } },
         '-', { label: 'Ajustes e backup…', icon: 'gear', fn: () => Shell.settings() },
-      ]));
+      ]), T.Full.btn());
     updateSession(); updateSave();
   };
   function updateSession(){
@@ -1101,6 +1103,25 @@
       ws.length ? { label: 'Apagar um espaço…', icon: 'trash', fn: () => T.menuAt(btn, ws.map(w => ({ label: 'Apagar “' + w.name + '”', icon: 'trash', danger: true, fn: () => S().update(Shell.pid, { meta: { workspaces: ws.filter(x => x !== w) } }) }))) } : null,
     ]);
   }
+
+  /* ---------- tela cheia (esconde a barra do Claude e a do navegador) ---------- */
+  T.Full = {
+    on: () => !!document.fullscreenElement,
+    async toggle(){
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else { const de = document.documentElement; if (!de.requestFullscreen) throw new Error('sem suporte'); await de.requestFullscreen({ navigationUI: 'hide' }); }
+      } catch (e) { T.toast('O navegador não deixou abrir em tela cheia aqui. No computador, a tecla F11 também deixa tudo em tela cheia.'); }
+    },
+    btn(cls = ''){ const on = T.Full.on(); return T.iconBtn('focus', on ? 'Sair da tela cheia (Esc)' : 'Tela cheia: o Entrelinhas ocupa a tela toda, sem a barra do Claude', () => T.Full.toggle(), '.full-btn' + (on ? '.on' : '') + cls); },
+  };
+  document.addEventListener('fullscreenchange', () => {
+    document.body.classList.toggle('is-full', T.Full.on());
+    document.querySelectorAll('.full-btn').forEach(b => { b.classList.toggle('on', T.Full.on()); b.title = T.Full.on() ? 'Sair da tela cheia (Esc)' : 'Tela cheia: o Entrelinhas ocupa a tela toda, sem a barra do Claude'; });
+  });
+  // opção: entrar em tela cheia sozinho no primeiro toque (o navegador só deixa depois de um clique)
+  const armAutoFull = () => { if (!S().prefs().autoFull) return; const go = (e) => { if (S().prefs().autoFull && !T.Full.on() && !e.target.closest('.full-btn')) T.Full.toggle(); }; document.addEventListener('pointerdown', go, { capture: true, once: true }); };
+  setTimeout(armAutoFull, 500);
 
   /* ---------- sprints (até 2 horas, com pausa e estatísticas) ---------- */
   const SPKEY = 'tinteiro-sprint';
