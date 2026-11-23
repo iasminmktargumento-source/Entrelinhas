@@ -88,7 +88,9 @@
     '6x9': { name: '6 × 9 pol.', w: 15.24, h: 22.86, mt: 2.0, mb: 2.3, mi: 2.2, mo: 1.7, wpp: 340 },
   };
   T.TRIMS = TRIMS;
-  const bookCfg = (proj) => Object.assign({ trim: '14x21', pt: 11, lead: 1.42, dropcap: true, sink: 30 }, proj?.meta?.book || {});
+  const bookCfg = (proj) => Object.assign({ trim: '14x21', pt: 11, lead: 1.42, dropcap: true, sink: 30, face: 'literata' }, proj?.meta?.book || {});
+  // letras do modo Livro: Literata foi desenhada para ler na tela (mais nítida); Garamond é a clássica de livro impresso
+  const BOOK_FACES = { literata: { name: 'Literata (nítida)', css: '"Literata", Georgia, serif', w: 400 }, garamond: { name: 'Garamond', css: '"EB Garamond", Garamond, serif', w: 500 }, georgia: { name: 'Georgia', css: 'Georgia, "Times New Roman", serif', w: 400 } };
 
   /* ---------- aparência do texto (zoom, fonte, tamanho) por modo ---------- */
   const PAPERS = [['', 'Padrão'], ['branco', 'Branco'], ['sepia', 'Sépia'], ['preto', 'Preto']];
@@ -792,9 +794,11 @@
         const W = ed.clientWidth - 110, H = ed.clientHeight - (tools.offsetHeight || 50) - 14 - 46 - 16;
         const single = !!view('book').single;
         const s = Math.max(6, Math.min(H / tr.h, W / ((single ? 1 : 2) * tr.w)) * (view('book').zoom / 100)); // px por cm
-        const PW = tr.w * s, PH = tr.h * s, mt = tr.mt * s, mb = tr.mb * s, mi = tr.mi * s, mo = tr.mo * s;
+        // tudo em pixels inteiros: frações de pixel deixam as letras borradas
+        const R = Math.round; const PW = R(tr.w * s), PH = R(tr.h * s), mt = R(tr.mt * s), mb = R(tr.mb * s), mi = R(tr.mi * s), mo = R(tr.mo * s);
         const TW = PW - mi - mo, TH = PH - mt - mb, G = 2 * mi;
-        const fs = cfg.pt * 0.03528 * s;
+        const fs = Math.round(cfg.pt * 0.03528 * s * 4) / 4;
+        const face = BOOK_FACES[cfg.face] || BOOK_FACES.literata; prose.style.setProperty('--font-book', face.css); prose.style.fontWeight = face.w; bookEls.deco.style.setProperty('--font-book', face.css);
         geo = { s, PW, PH, mt, mb, mi, mo, TW, TH, G, fs, single };
         spreadEl.style.width = (single ? 1 : 2) * PW + 'px'; spreadEl.style.height = PH + 'px';
         spreadEl.classList.toggle('single', single);
@@ -866,7 +870,7 @@
         const x = xOf(spread);
         if (geo.single) { bookEls.pgR.classList.toggle('r', spread % 2 === 0); bookEls.pgR.classList.toggle('l', spread % 2 === 1); }
         else { bookEls.pgR.classList.add('r'); bookEls.pgR.classList.remove('l'); } // voltando de 1 para 2 páginas: a da direita volta para o lado certo
-        prose.style.transform = 'translateX(' + x + 'px)';
+        prose.style.transform = 'translateX(' + Math.round(x) + 'px)';
         drawDeco();
         const nb = (d) => neighbor(d);
         const pv = nb(-1), nx = nb(1);
@@ -884,7 +888,7 @@
         const face = h('div.leaf-face' + (back ? '.back' : ''), { style: { width: geo.PW + 'px', height: geo.PH + 'px' } });
         const off = geo.single ? 0 : (side === 'r' ? -geo.PW : 0);
         const inner = h('div.leaf-in', { style: { left: off + 'px', top: geo.mt + 'px', width: bookEls.clip.style.width, height: geo.TH + 'px' } });
-        const pc = prose.cloneNode(true); pc.removeAttribute('contenteditable'); pc.style.transform = 'translateX(' + xT + 'px)';
+        const pc = prose.cloneNode(true); pc.removeAttribute('contenteditable'); pc.style.transform = 'translateX(' + Math.round(xT) + 'px)';
         inner.appendChild(pc); face.appendChild(inner);
         const dc = bookEls.deco.cloneNode(true); dc.style.left = off + 'px'; face.appendChild(dc);
         face.appendChild(h('i.leaf-shade'));
@@ -953,6 +957,7 @@
             h('b.bs-h', 'Formato do livro'),
             row('Tamanho', seg(Object.entries(TRIMS).map(([k, v]) => [cfg.trim === k, v.name, () => setB({ trim: k })]))),
             row('Corpo do texto', seg([10.5, 11, 11.5, 12].map(pt => [cfg.pt === pt, String(pt).replace('.', ',') + ' pt', () => setB({ pt })]))),
+            row('Letra', seg(Object.entries(BOOK_FACES).map(([k, f]) => [cfg.face === k, f.name, () => setB({ face: k })]))),
             row('Entrelinha', seg([[1.3, 'Justa'], [1.42, 'Normal'], [1.55, 'Aberta']].map(([l, n]) => [cfg.lead === l, n, () => setB({ lead: l })]))),
             h('label.mp-chk', h('input', { type: 'checkbox', checked: !!cfg.dropcap, onchange: () => setB({ dropcap: !cfg.dropcap }) }), 'Letra capitular na abertura do capítulo'),
             h('label.mp-chk', h('input', { type: 'checkbox', checked: !!cfg.openRight, onchange: () => { setB({ openRight: !cfg.openRight }); go(0, false); } }), 'Capítulo começa sozinho na página da direita (como no livro impresso)'),

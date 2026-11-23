@@ -1960,3 +1960,6 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .tree-row .ra svg{ width:14px; height:14px; }
 .tree-row .ra b{ font-size:15px; line-height:1; margin-top:-4px; }
 @media (hover: none){ .tree-row .row-acts{ display:inline-flex; } }
+/* modo Livro: letras mais nítidas */
+.book-flow{ -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-kerning: normal; }
+.book-flow h1.ch-title, .book-flow .ch-num{ font-weight: inherit; }
