@@ -1969,3 +1969,6 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .dict-chips{ display:flex; flex-wrap:wrap; gap:6px; max-height: 40vh; overflow:auto; }
 .dict-chips .chip{ display:inline-flex; align-items:center; gap:4px; }
 .dict-chips .ra{ border:0; background:transparent; cursor:pointer; color: var(--ink-3); font-size:14px; padding:0 2px; }
+/* logo toda em itálico */
+.hx-title .hx-word span, .hx-title .hx-word i{ font-style: italic; }
+.hx-title .hx-word{ padding-left: .16em; padding-right: .2em; }
