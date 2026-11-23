@@ -865,6 +865,7 @@
         // uma página: a página n é a coluna n (página da direita quando par, com a margem interna à esquerda)
         const x = xOf(spread);
         if (geo.single) { bookEls.pgR.classList.toggle('r', spread % 2 === 0); bookEls.pgR.classList.toggle('l', spread % 2 === 1); }
+        else { bookEls.pgR.classList.add('r'); bookEls.pgR.classList.remove('l'); } // voltando de 1 para 2 páginas: a da direita volta para o lado certo
         prose.style.transform = 'translateX(' + x + 'px)';
         drawDeco();
         const nb = (d) => neighbor(d);
