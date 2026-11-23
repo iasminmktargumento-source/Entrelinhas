@@ -1951,3 +1951,12 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .full-pop .full-opt span{ display:flex; flex-direction:column; gap:3px; }
 .full-pop .full-opt small{ font-size:11.5px; color: var(--ink-3); font-weight:400; line-height:1.35; }
 .full-pop .full-opt svg{ flex:none; margin-top:2px; }
+/* ações rápidas nas linhas do manuscrito */
+.tree-row .row-acts{ display:none; gap:2px; margin-left:auto; flex:none; }
+.tree-row:hover .row-acts, .tree-row:focus-within .row-acts{ display:inline-flex; }
+.tree-row:hover .wc, .tree-row:focus-within .wc{ display:none; }
+.tree-row .ra{ width:22px; height:22px; border:0; border-radius:7px; background:transparent; color: var(--ink-2); display:grid; place-items:center; cursor:pointer; padding:0; }
+.tree-row .ra:hover{ background: hsl(0 0% 50% / .16); color: var(--ink); }
+.tree-row .ra svg{ width:14px; height:14px; }
+.tree-row .ra b{ font-size:15px; line-height:1; margin-top:-4px; }
+@media (hover: none){ .tree-row .row-acts{ display:inline-flex; } }

@@ -594,7 +594,12 @@
         h('span.lbl', it.title || 'Sem título'),
         it.meta?.pov ? (() => { const s = h('span.pov', it.meta.pov.slice(0, 10)); s.style.setProperty('--ph', T.povHue(it.meta.pov)); return s; })() : null,
         it.type !== 'folder' && words ? h('span.wc.num', words >= 1000 ? (words / 1000).toFixed(1).replace('.', ',') + 'k' : String(words)) : null,
-        it.type === 'scene' ? h('span.stat', { style: { background: T.STATUS_COLORS[it.meta?.status || 'rascunho'] }, title: it.meta?.status || 'rascunho' }) : null);
+        it.type === 'scene' ? h('span.stat', { style: { background: T.STATUS_COLORS[it.meta?.status || 'rascunho'] }, title: it.meta?.status || 'rascunho' }) : null,
+        // ações rápidas (aparecem ao passar o mouse): criar dentro e o menu com renomear, apagar…
+        (() => { const ct = { part: 'chapter', chapter: 'scene', folder: 'doc' }[it.type]; const nm = { chapter: 'Novo capítulo dentro de', scene: 'Nova cena dentro de', doc: 'Novo documento dentro de' }[ct];
+          return h('span.row-acts',
+            ct ? h('button.ra', { type: 'button', title: nm + ' “' + (it.title || 'sem título') + '”', 'aria-label': nm + ' ' + (it.title || ''), onclick: (e) => { e.stopPropagation(); newItem(ct, it.id, it.area); Shell.openState[it.id] = true; persistOpen(); } }, icon('plus')) : null,
+            h('button.ra', { type: 'button', title: 'Renomear, apagar, criar e mais (ou clique com o botão direito)', 'aria-label': 'Mais opções de ' + (it.title || ''), onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setTimeout(() => rowMenu(it, r.left, r.bottom + 4), 0); } }, h('b', '⋯'))); })());
       tw.onclick = (e) => { e.stopPropagation(); Shell.openState[it.id] = !open; persistOpen(); Shell.redrawTree(); };
       row.onclick = () => { if (it.type === 'folder') { Shell.openState[it.id] = !open; persistOpen(); Shell.open({ kind: 'cork', ref: it.id }); Shell.redrawTree(); } else Shell.open({ kind: 'doc', ref: it.id }); };
       row.ondblclick = (e) => { e.preventDefault(); rename(it, row); };
@@ -663,6 +668,9 @@
       it.type !== 'folder' ? { label: 'Abrir em janela flutuante', icon: 'pop', fn: () => Shell.float({ id: T.id(), kind: 'doc', ref: it.id }) } : null,
       CONTAINERS[it.type] ? { label: 'Quadro de fichas', icon: 'cork', fn: () => Shell.open({ kind: 'cork', ref: it.id }) } : null,
       childType ? { label: childName, icon: TYPE_ICON[childType], fn: () => newItem(childType, it.id, it.area) } : null,
+      it.type === 'chapter' ? { label: 'Novo capítulo (no mesmo nível)', icon: TYPE_ICON.chapter, fn: () => newItem('chapter', it.parent, it.area) } : null,
+      it.type === 'part' ? { label: 'Nova parte', icon: TYPE_ICON.part, fn: () => newItem('part', it.parent, it.area) } : null,
+      it.type === 'scene' ? { label: 'Nova cena (no mesmo capítulo)', icon: TYPE_ICON.scene, fn: () => newItem('scene', it.parent, it.area) } : null,
       it.type === 'folder' ? { label: 'Nova subpasta', icon: 'folder', fn: () => newItem('folder', it.id, it.area) } : null,
       '-',
       { label: 'Renomear', icon: 'edit', fn: () => { const row = Shell.sideEl.querySelector('.tree-row[data-id="' + it.id + '"]'); if (row) rename(it, row); } },
