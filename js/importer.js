@@ -1,6 +1,7 @@
 /* Entrelinhas — importar um livro escrito em outro programa (Word .docx, Google Docs baixado como .docx, .txt, .md, .html) */
 (() => {
   const S = () => T.Store;
+  const { h, icon } = T;
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   /* ---------- ler um .docx (é um zip) sem biblioteca ---------- */
@@ -74,7 +75,9 @@
 
   /* ---------- montar partes, capítulos e cenas ---------- */
   const SEP = /^\s*(\*\s*\*\s*\*|\*{3,}|#|~{3,}|-{3,}|✦|◆|—\s*—\s*—)\s*$/;
-  const CH_LINE = /^\s*(cap[ií]tulo|chapter|parte)\b[\s\dIVXLC.:–—-]*/i;
+  const NUMW = '(\\d{1,3}|[IVXLC]{1,7}|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|s[eé]tim[oa]|oitav[oa]|non[oa]|d[eé]cim[oa])';
+  const PART_LINE = new RegExp('^\\s*(parte|livro|ato|volume|book|part)\\s+' + NUMW + '\\b', 'i');
+  const CH_LINE = new RegExp('^\\s*((cap[ií]tulo|cap\\.|chapter)\\s*' + NUMW + '?\\b|(\\d{1,3}|[IVXLC]{1,7})\\s*[.:–—-]?\\s*$|pr[oó]logo\\b|ep[ií]logo\\b|interl[uú]dio\\b)', 'i');
   function structure(paras){
     paras = paras.filter(p => p.text || p.level);
     const lv = new Set(paras.filter(p => p.level > 0).map(p => p.level));
@@ -83,18 +86,27 @@
     if (lvls.length >= 2) { partL = lvls[0]; chL = lvls[1]; } else if (lvls.length === 1) chL = lvls[0];
     const title = paras.find(p => p.level === -1)?.text || '';
     const parts = []; let part = null, ch = null, scene = null;
-    const newCh = (t) => { ch = { title: t || 'Capítulo ' + (countCh() + 1), scenes: [] }; scene = { title: 'Cena 1', paras: [] }; ch.scenes.push(scene); (part ? part.chapters : loose).push(ch); };
+    const newCh = (t) => { ch = { title: t || (countCh() === 0 ? 'Início' : 'Capítulo ' + (countCh() + 1)), scenes: [] }; scene = { title: 'Cena 1', paras: [] }; ch.scenes.push(scene); (part ? part.chapters : loose).push(ch); };
     const loose = []; const countCh = () => loose.length + parts.reduce((a, p) => a + p.chapters.length, 0);
+    // texto antes do primeiro capítulo/parte: se for curtinho (título, autora), vira o título do livro
+    const isMark = (p) => p.level > 0 || (p.text.length < 70 && (PART_LINE.test(p.text) || (!chL && CH_LINE.test(p.text))));
+    const firstMark = paras.findIndex(isMark);
+    let lead = firstMark > 0 ? paras.slice(0, firstMark).filter(p => p.level !== -1) : [];
+    let bookTitle = title;
+    if (lead.length && lead.reduce((a, p) => a + T.countWords(p.text), 0) <= 15) { if (!bookTitle) bookTitle = lead[0].text; paras = paras.slice(firstMark); }
     paras.forEach(p => {
       if (p.level === -1) return;
-      if (partL && p.level === partL) { part = { title: p.text || 'Parte', chapters: [] }; parts.push(part); ch = null; return; }
-      if ((chL && p.level === chL) || (!chL && p.text.length < 60 && CH_LINE.test(p.text))) { newCh(p.text); return; }
+      const short = p.text.length < 70;
+      // parte: título de nível mais alto, ou linha curta tipo "Parte 2" / "Livro um"
+      if ((partL && p.level === partL) || (short && PART_LINE.test(p.text) && (p.level > 0 || !chL))) { part = { title: p.text || 'Parte', chapters: [] }; parts.push(part); ch = null; return; }
+      // capítulo: título do nível dos capítulos, ou linha curta tipo "Capítulo 3", "III", "Prólogo"
+      if ((chL && p.level === chL) || (!chL && short && CH_LINE.test(p.text))) { newCh(p.text); return; }
       if (p.level > 0) { if (!ch) newCh(''); scene.paras.push('<p><strong>' + p.html + '</strong></p>'); return; }
       if (SEP.test(p.text)) { if (ch && scene.paras.length) { scene = { title: 'Cena ' + (ch.scenes.length + 1), paras: [] }; ch.scenes.push(scene); } return; }
       if (!ch) newCh('');
       scene.paras.push('<p>' + p.html + '</p>');
     });
-    return { title, parts, loose };
+    return { title: bookTitle, parts, loose };
   }
 
   async function fromFile(file){
@@ -113,7 +125,17 @@
     if (!nCh) { T.toast('O arquivo parece vazio.'); return; }
     const words = paras.reduce((a, p) => a + T.countWords(p.text), 0);
     const title = st.title || name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
-    const ok = await T.confirm('Importar “' + title + '”?', 'Vai virar um livro novo com ' + (st.parts.length ? st.parts.length + (st.parts.length === 1 ? ' parte, ' : ' partes, ') : '') + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + ' e cerca de ' + T.fmt(words) + ' palavras. O arquivo original não é alterado.' + (nCh === 1 && words > 4000 ? ' Dica: os capítulos são separados pelos títulos (estilo “Título 1” no Word/Docs) ou por linhas como “Capítulo 2”.' : ''), 'Importar');
+    const ok = await new Promise(res => T.modal((box, close) => {
+      const wc = (c) => c.scenes.reduce((a, sc) => a + sc.paras.reduce((b, x) => b + T.countWords(x.replace(/<[^>]+>/g, ' ')), 0), 0);
+      const chRow = (c) => h('li', h('span', c.title), h('span.muted', ' · ' + c.scenes.length + (c.scenes.length === 1 ? ' cena' : ' cenas') + ' · ' + T.fmt(wc(c)) + ' pal.'));
+      const done = (v) => { close(); res(v); };
+      box.append(h('h2', 'Importar “' + title + '”'),
+        h('p.sub', 'Encontrei ' + (st.parts.length ? st.parts.length + (st.parts.length === 1 ? ' parte, ' : ' partes, ') : '') + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + ' e cerca de ' + T.fmt(words) + ' palavras. Vai virar um livro novo assim (o arquivo original não muda):'),
+        h('div.imp-outline', h('ul', ...st.loose.map(chRow), ...st.parts.map(pt => h('li.imp-part', h('b', pt.title), h('ul', pt.chapters.map(chRow)))))),
+        nCh === 1 && words > 3000 ? h('p.muted', { style: { fontSize: '12.5px' } }, 'Só achei um capítulo. Eu separo o livro pelos títulos do documento (estilos “Título 1”, “Título 2” do Word ou Google Docs) ou por linhas sozinhas como “Capítulo 3”, “Parte 2”, “III”, “Prólogo”. Se o seu arquivo usa outro jeito, me conte qual.') : null,
+        h('p.muted', { style: { fontSize: '12.5px' } }, 'Cenas são separadas por linhas como “* * *” ou “#”. Depois dá para renomear, juntar e mover tudo pela barra lateral.'),
+        h('div.modal-foot', h('span.grow'), h('button.btn', { onclick: () => done(false) }, 'Cancelar'), h('button.btn.primary', { onclick: () => done(true) }, icon('check'), 'Importar')));
+    }));
     if (!ok) return;
     const p = T.Shell.createProject({ title, hue: Math.floor(Math.random() * 360) }, { noOpen: true });
     const pid = p.id;

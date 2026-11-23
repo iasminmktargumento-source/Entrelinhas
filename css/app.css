@@ -1972,3 +1972,4 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 /* logo toda em itálico */
 .hx-title .hx-word span, .hx-title .hx-word i{ font-style: italic; }
 .hx-title .hx-word{ padding-left: .16em; padding-right: .2em; }
+.imp-outline{ max-height: 46vh; overflow:auto; font-size: 13.5px; } .imp-outline ul{ margin: 4px 0; padding-left: 20px; } .imp-outline .imp-part{ margin-top: 4px; }
