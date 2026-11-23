@@ -583,7 +583,9 @@
   function tree(pid, parent, area, filter){
     const wrap = h('div' + (parent ? '.tree-kids' : ''));
     S().children(pid, parent, area).filter(i => TYPE_ICON[i.type]).forEach(it => {
-      const kids = S().children(pid, it.id).filter(k => TYPE_ICON[k.type]);
+      let kids = S().children(pid, it.id).filter(k => TYPE_ICON[k.type]);
+      // capítulo com um texto só: não mostra a "cena" escondida dentro dele
+      if (it.type === 'chapter' && kids.length === 1 && kids[0].type === 'scene') kids = [];
       const match = !filter || (it.title || '').toLowerCase().includes(filter) || S().descendants(it.id).some(d => (d.title || '').toLowerCase().includes(filter));
       if (!match) return;
       const open = filter ? true : Shell.openState[it.id] ?? (it.type !== 'chapter');
@@ -597,7 +599,7 @@
         it.type !== 'folder' && words ? h('span.wc.num', words >= 1000 ? (words / 1000).toFixed(1).replace('.', ',') + 'k' : String(words)) : null,
         it.type === 'scene' ? h('span.stat', { style: { background: T.STATUS_COLORS[it.meta?.status || 'rascunho'] }, title: it.meta?.status || 'rascunho' }) : null,
         // ações rápidas (aparecem ao passar o mouse): criar dentro e o menu com renomear, apagar…
-        (() => { const ct = { part: 'chapter', chapter: 'scene', folder: 'doc' }[it.type]; const nm = { chapter: 'Novo capítulo dentro de', scene: 'Nova cena dentro de', doc: 'Novo documento dentro de' }[ct];
+        (() => { const ct = { part: 'chapter', folder: 'doc' }[it.type]; const nm = { chapter: 'Novo capítulo dentro de', scene: 'Nova cena dentro de', doc: 'Novo documento dentro de' }[ct];
           return h('span.row-acts',
             ct ? h('button.ra', { type: 'button', title: nm + ' “' + (it.title || 'sem título') + '”', 'aria-label': nm + ' ' + (it.title || ''), onclick: (e) => { e.stopPropagation(); newItem(ct, it.id, it.area); Shell.openState[it.id] = true; persistOpen(); } }, icon('plus')) : null,
             h('button.ra', { type: 'button', title: 'Renomear, apagar, criar e mais (ou clique com o botão direito)', 'aria-label': 'Mais opções de ' + (it.title || ''), onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setTimeout(() => rowMenu(it, r.left, r.bottom + 4), 0); } }, h('b', '⋯'))); })());

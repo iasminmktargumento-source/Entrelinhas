@@ -86,7 +86,7 @@
     if (lvls.length >= 2) { partL = lvls[0]; chL = lvls[1]; } else if (lvls.length === 1) chL = lvls[0];
     const title = paras.find(p => p.level === -1)?.text || '';
     const parts = []; let part = null, ch = null, scene = null;
-    const newCh = (t) => { ch = { title: t || (countCh() === 0 ? 'Início' : 'Capítulo ' + (countCh() + 1)), scenes: [] }; scene = { title: 'Cena 1', paras: [] }; ch.scenes.push(scene); (part ? part.chapters : loose).push(ch); };
+    const newCh = (t) => { ch = { title: t || (countCh() === 0 ? 'Início' : 'Capítulo ' + (countCh() + 1)), scenes: [] }; scene = { title: 'Texto', paras: [] }; ch.scenes.push(scene); (part ? part.chapters : loose).push(ch); };
     const loose = []; const countCh = () => loose.length + parts.reduce((a, p) => a + p.chapters.length, 0);
     // texto antes do primeiro capítulo/parte: se for curtinho (título, autora), vira o título do livro
     const isMark = (p) => p.level > 0 || (p.text.length < 70 && (PART_LINE.test(p.text) || (!chL && CH_LINE.test(p.text))));
@@ -102,7 +102,8 @@
       // capítulo: título do nível dos capítulos, ou linha curta tipo "Capítulo 3", "III", "Prólogo"
       if ((chL && p.level === chL) || (!chL && short && CH_LINE.test(p.text))) { newCh(p.text); return; }
       if (p.level > 0) { if (!ch) newCh(''); scene.paras.push('<p><strong>' + p.html + '</strong></p>'); return; }
-      if (SEP.test(p.text)) { if (ch && scene.paras.length) { scene = { title: 'Cena ' + (ch.scenes.length + 1), paras: [] }; ch.scenes.push(scene); } return; }
+      // sem divisão em cenas: linhas como "* * *" ficam no texto do jeito que estão
+      if (SEP.test(p.text)) { if (!ch) newCh(''); scene.paras.push('<p style="text-align:center">' + p.html + '</p>'); return; }
       if (!ch) newCh('');
       scene.paras.push('<p>' + p.html + '</p>');
     });
@@ -127,13 +128,13 @@
     const title = st.title || name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
     const ok = await new Promise(res => T.modal((box, close) => {
       const wc = (c) => c.scenes.reduce((a, sc) => a + sc.paras.reduce((b, x) => b + T.countWords(x.replace(/<[^>]+>/g, ' ')), 0), 0);
-      const chRow = (c) => h('li', h('span', c.title), h('span.muted', ' · ' + c.scenes.length + (c.scenes.length === 1 ? ' cena' : ' cenas') + ' · ' + T.fmt(wc(c)) + ' pal.'));
+      const chRow = (c) => h('li', h('span', c.title), h('span.muted', ' · ' + T.fmt(wc(c)) + ' palavras'));
       const done = (v) => { close(); res(v); };
       box.append(h('h2', 'Importar “' + title + '”'),
         h('p.sub', 'Encontrei ' + (st.parts.length ? st.parts.length + (st.parts.length === 1 ? ' parte, ' : ' partes, ') : '') + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + ' e cerca de ' + T.fmt(words) + ' palavras. Vai virar um livro novo assim (o arquivo original não muda):'),
         h('div.imp-outline', h('ul', ...st.loose.map(chRow), ...st.parts.map(pt => h('li.imp-part', h('b', pt.title), h('ul', pt.chapters.map(chRow)))))),
         nCh === 1 && words > 3000 ? h('p.muted', { style: { fontSize: '12.5px' } }, 'Só achei um capítulo. Eu separo o livro pelos títulos do documento (estilos “Título 1”, “Título 2” do Word ou Google Docs) ou por linhas sozinhas como “Capítulo 3”, “Parte 2”, “III”, “Prólogo”. Se o seu arquivo usa outro jeito, me conte qual.') : null,
-        h('p.muted', { style: { fontSize: '12.5px' } }, 'Cenas são separadas por linhas como “* * *” ou “#”. Depois dá para renomear, juntar e mover tudo pela barra lateral.'),
+        h('p.muted', { style: { fontSize: '12.5px' } }, 'Cada capítulo fica com o texto inteiro dele. Depois dá para renomear e mover tudo pela barra lateral.'),
         h('div.modal-foot', h('span.grow'), h('button.btn', { onclick: () => done(false) }, 'Cancelar'), h('button.btn.primary', { onclick: () => done(true) }, icon('check'), 'Importar')));
     }));
     if (!ok) return;

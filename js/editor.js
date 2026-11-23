@@ -204,7 +204,9 @@
         if (!isOpening) return null;
         const target = item.type === 'part' ? item : ch;
         const n = target.type === 'chapter' ? T.MS.chapterNumber(target) : 0;
-        return h('h1.ch-title', { contenteditable: 'false' }, n ? h('span.ch-num', 'Capítulo ' + n) : (target.type === 'part' ? h('span.ch-num', 'Parte') : null), target.title || 'Sem título');
+        // se o próprio título já diz o que é ("Capítulo 3", "Prólogo", "III"), não repete o número em cima
+        const selfNamed = /^\s*(cap[ií]tulo|chapter|pr[oó]logo|ep[ií]logo|interl[uú]dio|parte|\d{1,3}\b|[IVXLC]{1,7}\b)/i.test(target.title || '');
+        return h('h1.ch-title', { contenteditable: 'false' }, n && !selfNamed ? h('span.ch-num', 'Capítulo ' + n) : (target.type === 'part' ? h('span.ch-num', 'Parte') : null), target.title || 'Sem título');
       }
       function render(){
         prose.innerHTML = '';
