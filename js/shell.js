@@ -1113,11 +1113,22 @@
         else { const de = document.documentElement; if (!de.requestFullscreen) throw new Error('sem suporte'); await de.requestFullscreen({ navigationUI: 'hide' }); }
       } catch (e) { T.toast('O navegador não deixou abrir em tela cheia aqui. No computador, a tecla F11 também deixa tudo em tela cheia.'); }
     },
-    btn(cls = ''){ const on = T.Full.on(); return T.iconBtn('focus', on ? 'Sair da tela cheia (Esc)' : 'Tela cheia: o Entrelinhas ocupa a tela toda, sem a barra do Claude', () => T.Full.toggle(), '.full-btn' + (on ? '.on' : '') + cls); },
+    SOLO_URL: 'https://iasminmktargumento-source.github.io/Entrelinhas/',
+    // dentro do Claude: escolher entre tela cheia total ou abrir a versão independente numa aba comum
+    choose(anchor){
+      if (T.Full.on() || T.STANDALONE) { T.Full.toggle(); return; }
+      const box = h('div.stack.full-pop', { style: { width: '320px' } },
+        h('b', 'Como você quer ver o Entrelinhas?'),
+        h('button.btn.full-opt', { onclick: () => { T.closePopover && T.closePopover(); T.Full.toggle(); } }, icon('focus'), h('span', h('b', 'Tela cheia'), h('small', 'Esconde a barra do Claude e também a do navegador e do computador. Esc para sair.'))),
+        h('a.btn.full-opt', { href: T.Full.SOLO_URL, target: '_blank', rel: 'noopener' }, icon('pop'), h('span', h('b', 'Numa aba comum, sem o Claude'), h('small', 'Abre a versão independente: abas e barra do computador continuam à mão. Os livros de lá ficam no navegador (traga com backup › Importar), e sinônimos, nomes e backup no Google Docs só funcionam aqui.'))),
+        h('p.muted', { style: { fontSize: '11.5px', margin: 0 } }, 'Dentro do claude.ai, o navegador não deixa um site esconder a barra do Claude sem entrar em tela cheia.'));
+      T.popover(anchor, box);
+    },
+    btn(cls = ''){ const on = T.Full.on(); const b = T.iconBtn('focus', on ? 'Sair da tela cheia (Esc)' : 'Expandir: tela cheia ou abrir numa aba comum, sem o Claude', () => T.Full.choose(b), '.full-btn' + (on ? '.on' : '') + cls); return b; },
   };
-  document.addEventListener('fullscreenchange', () => {
+  document.addEventListener('fullscreenchange', () => { T.closePopover && T.closePopover();
     document.body.classList.toggle('is-full', T.Full.on());
-    document.querySelectorAll('.full-btn').forEach(b => { b.classList.toggle('on', T.Full.on()); b.title = T.Full.on() ? 'Sair da tela cheia (Esc)' : 'Tela cheia: o Entrelinhas ocupa a tela toda, sem a barra do Claude'; });
+    document.querySelectorAll('.full-btn').forEach(b => { b.classList.toggle('on', T.Full.on()); b.title = T.Full.on() ? 'Sair da tela cheia (Esc)' : 'Expandir: tela cheia ou abrir numa aba comum, sem o Claude'; });
   });
   // opção: entrar em tela cheia sozinho no primeiro toque (o navegador só deixa depois de um clique)
   const armAutoFull = () => { if (!S().prefs().autoFull) return; const go = (e) => { if (S().prefs().autoFull && !T.Full.on() && !e.target.closest('.full-btn')) T.Full.toggle(); }; document.addEventListener('pointerdown', go, { capture: true, once: true }); };
