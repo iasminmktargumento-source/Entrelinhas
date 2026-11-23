@@ -94,10 +94,17 @@
 
   T.closePopover = () => { if (openPop) openPop.remove(); };
 
-  T.pickFile = (accept) => new Promise(res => {
-    const inp = h('input', { type: 'file', accept, style: { display: 'none' } });
-    inp.addEventListener('change', () => { res(inp.files[0] || null); inp.remove(); });
-    document.body.appendChild(inp); inp.click();
+  // escolhe um arquivo; quando o navegador deixa, já abre na pasta Downloads
+  T.pickFile = (accept, opts = {}) => new Promise(res => {
+    const viaInput = () => { const inp = h('input', { type: 'file', accept, style: { display: 'none' } }); inp.addEventListener('change', () => { res(inp.files[0] || null); inp.remove(); }); document.body.appendChild(inp); inp.click(); };
+    if (opts.startIn && window.showOpenFilePicker && window.top === window) {
+      const exts = String(accept || '').split(',').map(x => x.trim()).filter(x => x.startsWith('.'));
+      window.showOpenFilePicker({ startIn: opts.startIn, multiple: false, types: exts.length ? [{ description: 'Arquivos', accept: { 'application/octet-stream': exts } }] : undefined })
+        .then(async ([hd]) => res(hd ? await hd.getFile() : null))
+        .catch((e) => { if (e && e.name === 'AbortError') res(null); else viaInput(); });
+      return;
+    }
+    viaInput();
   });
 
   T.iconBtn = (name, title, onclick, cls = '') => {

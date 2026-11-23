@@ -79,7 +79,7 @@
         h('div.home-actions.hx-actions',
           h('button.btn.primary.hx-cta', { onclick: () => Shell.projectModal() }, icon('plus'), 'Novo livro'),
           last ? h('button.btn.hx-ghost', { onclick: () => Shell.openProject(last.id) }, icon('pen'), 'Continuar “' + (last.title || 'Sem título') + '”') : null,
-          h('button.btn.hx-ghost', { onclick: importBackup, title: 'Importar um backup' }, icon('upload'), 'Importar'),
+          h('button.btn.hx-ghost', { onclick: (e) => T.menuAt(e.currentTarget, [{ head: 'Importar (abre a pasta Downloads quando o navegador deixa)' }, { label: 'Livro de outro programa (Word, Google Docs, .txt, .md)…', icon: 'doc', fn: () => T.Importer.pick() }, { label: 'Backup do Entrelinhas (.json)…', icon: 'download', fn: () => importBackup() }]), title: 'Importar um livro do Word/Google Docs ou um backup do Entrelinhas' }, icon('upload'), 'Importar ▾'),
           T.Full.btn('.hx-ic'), T.iconBtn('gear', 'Ajustes', () => Shell.settings(), '.hx-ic')),
         T.STANDALONE ? h('div.hx-solo.glass', icon('home'), h('div', h('b', 'Versão independente do Entrelinhas'), h('p', 'Seus livros ficam guardados neste navegador, neste aparelho. Para trazer os livros do Claude: lá, abra Ajustes › Backup › “Backup de todos os livros”; aqui, toque em Importar. Faça backups de vez em quando (o lembrete avisa). Sinônimos, gerador de nomes e outras funções que usam o Claude só funcionam na versão do claude.ai.'))) : null),
       );
@@ -183,7 +183,7 @@
     }, { onClose: () => Shell.applyTheme() });
   };
 
-  Shell.createProject = function({ title, description, hue, author, cover, template, sample }){
+  Shell.createProject = function({ title, description, hue, author, cover, template, sample }, opts = {}){
     const p = S().create({ type: 'project', title, meta: { sample: !!sample, description, hue, author, cover, targets: { book: 90000, session: 1000, deadline: '', days: [1, 2, 3, 4, 5] } } });
     const pid = p.id; let o = 1000;
     const mk = (type, title, parent, meta = {}, body = '') => S().create({ pid, type, area: 'ms', parent, title, order: (o += 1000), meta: Object.assign({ status: 'rascunho' }, meta), body });
@@ -214,7 +214,8 @@
       if (first) S().update(first.id, { body, meta: { words: T.words(body), pov: 'Iris', synopsis: 'Iris e Vera ouvem o sino impossível na noite de chuva.' } });
       S().create({ pid, type: 'idea', area: 'ideas', title: 'E se a lua vermelha for um olho?', body: '<p>E se a lua vermelha for um olho?</p>' });
     }
-    Shell.openProject(pid);
+    if (!opts.noOpen) Shell.openProject(pid);
+    return p;
   };
 
   /* ================= PROJETO ================= */
@@ -1359,7 +1360,7 @@
     deliver('tinteiro-tudo-' + T.today() + '.json', { app: 'tinteiro', version: 1, exported: Date.now(), items });
   };
   async function importBackup(){
-    const f = await T.pickFile('.json,application/json'); if (!f) return;
+    const f = await T.pickFile('.json,application/json', { startIn: 'downloads' }); if (!f) return;
     let data; try { data = JSON.parse(await f.text()); } catch (e) { T.toast('Este arquivo não é um backup do Entrelinhas.'); return; }
     if (!data || data.app !== 'tinteiro' || !Array.isArray(data.items)) { T.toast('Este arquivo não é um backup do Entrelinhas.'); return; }
     const projs = data.items.filter(i => i.type === 'project');
