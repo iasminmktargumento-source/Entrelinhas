@@ -17,10 +17,10 @@
   };
 
   /* ---------- monta o texto do documento ---------- */
-  function build(pid){
+  const MARK = '⟦Entrelinhas · ';
+  function build(pid, base = 1){
     const proj = S().get(pid);
     let text = ''; const paras = []; const runs = [];
-    const base = 1;
     const para = (segs, style, align) => {
       const start = base + text.length;
       segs.forEach(sg => { const t = String(sg.t).replace(BAD_CH, ' '); if (!t) return; const a = base + text.length; text += t; if (sg.st && Object.keys(sg.st).length) runs.push({ a, b: base + text.length, st: sg.st }); });
@@ -28,8 +28,10 @@
       paras.push({ a: start, b: base + text.length, style: style || 'NORMAL_TEXT', align });
     };
     const fmt = (ts) => new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // marcador: cada livro tem a sua parte no documento (vários livros podem dividir o mesmo documento)
+    para([{ t: MARK + pid + '⟧', st: { color: [.72, .72, .76], size: 7 } }], 'NORMAL_TEXT');
     para([{ t: proj?.title || 'Meu livro' }], 'TITLE');
-    para([{ t: 'Cópia de segurança feita pelo Entrelinhas · atualizada em ' + fmt(Date.now()) + '. Este documento é refeito a cada backup: escreva no Entrelinhas, não aqui.', st: { italic: true, color: [.45, .45, .5] } }], 'NORMAL_TEXT');
+    para([{ t: 'Cópia de segurança feita pelo Entrelinhas · atualizada em ' + fmt(Date.now()) + '. Esta parte do documento é refeita a cada backup deste livro: escreva no Entrelinhas, não aqui.', st: { italic: true, color: [.45, .45, .5] } }], 'NORMAL_TEXT');
     const flat = T.MS.flat(pid);
     let n = 0;
     const host = document.createElement('div');
@@ -90,6 +92,7 @@
     });
     doc.runs.forEach(r => {
       const ts = {}; const f = [];
+      if (r.st.size) { ts.fontSize = { magnitude: r.st.size, unit: 'PT' }; f.push('fontSize'); }
       if (r.st.bold) { ts.bold = true; f.push('bold'); }
       if (r.st.italic) { ts.italic = true; f.push('italic'); }
       if (r.st.underline) { ts.underline = true; f.push('underline'); }
@@ -100,6 +103,12 @@
       if (f.length) out.push({ updateTextStyle: { range: { startIndex: r.a, endIndex: r.b }, textStyle: ts, fields: f.join(',') } });
     });
     return out;
+  }
+  // parágrafos do documento com posição e texto (formato do documents.get)
+  function parasOf(payload){
+    const c = payload?.content || payload?.document || payload;
+    const body = c?.tabs?.[0]?.documentTab?.body || c?.body;
+    return (body?.content || []).filter(x => x.paragraph).map(x => ({ a: x.startIndex || 0, b: x.endIndex || 0, t: (x.paragraph.elements || []).map(e => e.textRun?.content || '').join('') }));
   }
   function endIndexOf(payload){
     const c = payload?.content || payload?.document || payload;
@@ -119,13 +128,21 @@
     s.running = true; s.dirty = false; clearTimeout(s.timer); s.firstDirty = 0; T.emit('gdocs-status', pid);
     try {
       T.Shell.flushEditors && T.Shell.flushEditors();
-      const doc = build(pid);
       const r0 = await m.callTool(SERVER, 'read_doc', { documentId: id }, { cache: false });
       const end = endIndexOf(r0.payload);
+      // onde fica a parte deste livro: entre o marcador dele e o próximo marcador
+      const marks = parasOf(r0.payload).filter(p => p.t.startsWith(MARK));
+      let base = 1, delA = 1, delB = end - 1;
+      if (marks.length) {
+        const i = marks.findIndex(p => p.t.startsWith(MARK + pid + '⟧'));
+        if (i >= 0) { delA = base = marks[i].a; delB = i + 1 < marks.length ? marks[i + 1].a : end - 1; }
+        else { base = delA = delB = end - 1; } // livro novo neste documento: vai para o fim
+      }
+      const doc = build(pid, base);
       const head = [];
-      if (end > 2) head.push({ deleteContentRange: { range: { startIndex: 1, endIndex: end - 1 } } });
+      if (delB > delA) head.push({ deleteContentRange: { range: { startIndex: delA, endIndex: delB } } });
       // texto em pedaços (cada chamada tem limite de tamanho)
-      const CH = 150000; let at = 1;
+      const CH = 150000; let at = base;
       for (let i = 0; i < doc.text.length; i += CH) {
         const piece = doc.text.slice(i, i + CH);
         const reqs = (i === 0 ? head : []).concat([{ insertText: { location: { index: at }, text: piece } }]);
@@ -180,12 +197,12 @@
     let ps = []; try { ps = await S().loadProjects(); } catch (e) { ps = []; }
     return ps.find(p => p.id !== pid && idOf(p.meta?.gdocs?.url) === id) || null;
   };
-  G.suggest = async function(pid){ const c = G.cfg(pid); if (c.url) return c.url; const o = await G.owner(DEFAULT_URL, pid); return o ? '' : DEFAULT_URL; };
+  G.suggest = async function(pid){ const c = G.cfg(pid); return c.url || DEFAULT_URL; };
   async function saveUrl(pid, raw, on){
     const u = String(raw || '').trim(); const id = idOf(u);
     if (!id) { T.toast('Esse link não parece de um documento do Google Docs.'); return false; }
     const o = await G.owner(u, pid);
-    if (o) { T.toast('Esse documento já guarda o backup de “' + (o.title || 'outro livro') + '”. Use um documento novo para este livro, senão um backup apaga o outro.'); return false; }
+    if (o) T.toast('Esse documento também guarda o backup de “' + (o.title || 'outro livro') + '”. Cada livro fica na sua própria parte do documento, um depois do outro.');
     G.set(pid, { url: u, on, never: false }); return true;
   }
   // ao abrir um livro sem backup: pede o link
@@ -199,7 +216,7 @@
       box.append(h('h2', 'Backup deste livro no Google Docs'),
         h('p.sub', '“' + (p.title || 'Este livro') + '” ainda não tem backup. Cole o link de um documento do Google Docs só para ele: o que você escrever no manuscrito (com os comentários) vai sendo copiado para lá sozinho, cerca de 1 minuto depois que você para de escrever.'),
         h('label.field', 'Link do documento', url),
-        h('p.muted', { style: { fontSize: '12px', margin: '0' } }, 'Use um documento diferente para cada livro, de preferência vazio: ele vira um espelho do livro e é refeito a cada backup. Para criar um: docs.google.com › Documento em branco › copie o link da barra do navegador.'),
+        h('p.muted', { style: { fontSize: '12px', margin: '0' } }, 'Pode ser o mesmo documento de outro livro: cada livro fica na sua parte, uma depois da outra, e o backup de um não apaga o do outro. Ele é refeito a cada backup, então escreva no Entrelinhas, não no documento. Para criar um: docs.google.com › Documento em branco › copie o link da barra do navegador.'),
         h('div.modal-foot',
           h('button.btn.ghost', { onclick: () => { G.set(pid, { never: true }); close(); T.toast('Tudo bem. Se mudar de ideia: Manuscrito › Backup no Docs.'); } }, 'Não perguntar para este livro'),
           h('span.grow'),
