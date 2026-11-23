@@ -298,6 +298,10 @@
           { label: (AN.len ? '✓ ' : '') + 'Colorir o tamanho das frases', icon: 'chart', fn: () => setAn('len') },
           { label: (AN.weak ? '✓ ' : '') + 'Achar verbo fraco + advérbio', icon: 'spark', fn: () => setAn('weak') },
           ...(anOn ? ['-', { label: 'Desligar tudo', icon: 'x', fn: () => { AN.len = AN.weak = false; runAnalysis(); buildTools(); } }] : []),
+          '-', { head: 'Ortografia' },
+          { label: (SP.on ? '✓ ' : '') + (SP.busy ? 'Revisando…' : 'Revisar ortografia (Claude)'), icon: 'check', fn: () => toggleSpell() },
+          SP.on ? { label: 'Revisar de novo', icon: 'replace', fn: () => checkSpelling() } : null,
+          { label: 'Meu dicionário…', icon: 'book', fn: () => dictModal() },
         ]) }, icon('chart'), h('span.lbl', 'Análise'), h('span.caret', '▾'));
         const mic = T.iconBtn('voice', dictOn ? 'Parar o ditado' : 'Ditar: fale e o texto aparece onde está o cursor (diga “vírgula”, “ponto”, “nova linha”, “travessão”…)', () => toggleDictation(), dictOn ? '.dict-on' : '');
         const fnd = T.iconBtn('search', 'Localizar e substituir neste texto (Ctrl+F)', () => findBar(), '.find-btn');
@@ -1154,6 +1158,84 @@
       const BUCKETS = [[1, 5, 'Bem curta (até 5 palavras)'], [2, 12, 'Curta (6 a 12)'], [3, 20, 'Média (13 a 20)'], [4, 30, 'Longa (21 a 30)'], [5, 1e9, 'Muito longa (mais de 30)']];
       function textMap(p){ const nodes = []; let txt = ''; const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let t; while ((t = w.nextNode())) { if (t.parentElement.closest('.scene-sep')) continue; nodes.push([t, txt.length]); txt += t.data; } return { txt, nodes }; }
       function rangeAt(map, a, b){ const r = document.createRange(); let sa = false; for (let i = 0; i < map.nodes.length; i++) { const [t, off] = map.nodes[i]; const end = off + t.data.length; if (!sa && a <= end) { r.setStart(t, Math.max(0, a - off)); sa = true; } if (sa && b <= end) { r.setEnd(t, Math.max(0, b - off)); return r; } } return sa ? r : null; }
+      /* ----- revisão de ortografia (Claude) + meu dicionário ----- */
+      const SP = { on: false, errs: new Map(), busy: false, ign: new Set() };
+      const spKey = (w) => w.toLowerCase();
+      const myDict = () => new Set([...(S().get(item.pid)?.meta?.dict || []).map(spKey), ...(T.Ent?.pages ? T.Ent.pages(item.pid).flatMap(p => (p.title || '').split(/\s+/)).map(spKey) : [])]);
+      const WORD_RE = /[\p{L}]+(?:[-'’][\p{L}]+)*/gu;
+      function markSpelling(){
+        if (!HLN) return 0; CSS.highlights.delete('sp-err');
+        if (!SP.on || !SP.errs.size) return 0;
+        const hl = new Highlight(); const dict = myDict(); const found = new Set();
+        prose.querySelectorAll('section > p, section > h1, section > h2').forEach(p => {
+          const map = textMap(p); let m; WORD_RE.lastIndex = 0;
+          while ((m = WORD_RE.exec(map.txt))) { const k = spKey(m[0]); if (!SP.errs.has(k) || dict.has(k) || SP.ign.has(k)) continue; const r = rangeAt(map, m.index, m.index + m[0].length); if (r) { hl.add(r); found.add(k); } }
+        });
+        CSS.highlights.set('sp-err', hl); return found.size;
+      }
+      const markSpellSoon = T.debounce(markSpelling, 500);
+      async function checkSpelling(){
+        if (SP.busy) return; SP.busy = true; buildTools();
+        try {
+          const dict = myDict();
+          const paras = [...prose.querySelectorAll('section > p')].map(p => p.textContent.trim()).filter(Boolean);
+          const chunks = []; let cur = '';
+          paras.forEach(t => { if ((cur + '\n' + t).length > 6000 && cur) { chunks.push(cur); cur = ''; } cur += (cur ? '\n' : '') + t; }); if (cur) chunks.push(cur);
+          if (!chunks.length) { T.toast('Não há texto para revisar aqui.'); return; }
+          T.toast('Revisando a ortografia…');
+          for (const ch of chunks) {
+            const out = await T.AI.json('Você é um revisor de ortografia do português do Brasil. No texto abaixo (trecho de um romance de fantasia), encontre SOMENTE palavras escritas com erro de ortografia ou acentuação (não aponte gramática, estilo, pontuação, regência nem escolhas do autor). Ignore nomes próprios e palavras inventadas que pareçam intencionais do mundo da história. Não aponte estas palavras, que a autora já aprovou: ' + ([...dict].slice(0, 300).join(', ') || '(nenhuma)') + '.\nResponda só JSON: {"erros":[{"palavra":"como está escrita no texto","sugestoes":["forma correta mais provável","outra opção"]}]}. Se não houver erros, {"erros":[]}.\n\nTEXTO:\n' + ch);
+            (out?.erros || []).forEach(e => { const w = String(e.palavra || '').trim(); if (!w || /\s/.test(w)) return; const sug = (e.sugestoes || []).map(String).filter(x => x && x !== w).slice(0, 5); if (sug.length) SP.errs.set(spKey(w), { word: w, sug }); });
+          }
+          const n = markSpelling();
+          T.toast(n ? n + (n === 1 ? ' palavra marcada' : ' palavras marcadas') + ' com sublinhado vermelho. Toque nela para ver a correção.' : 'Nenhum erro de ortografia encontrado aqui. 🎉');
+        } catch (e) { T.toast(T.AI.errText(e)); if (e?.code === 'private' || e?.code === 'standalone') { SP.on = false; prose.spellcheck = true; } }
+        finally { SP.busy = false; buildTools(); }
+      }
+      function toggleSpell(){
+        SP.on = !SP.on; prose.spellcheck = !SP.on;
+        if (SP.on) checkSpelling(); else { if (HLN) CSS.highlights.delete('sp-err'); buildTools(); }
+      }
+      function addToDict(word){
+        const p = S().get(item.pid); const d = [...(p.meta?.dict || [])]; if (!d.some(x => spKey(x) === spKey(word))) d.push(word);
+        S().update(item.pid, { meta: { dict: d.sort((a, b) => a.localeCompare(b, 'pt')) } }); markSpelling();
+        T.toast('“' + word + '” entrou no seu dicionário. Não vou mais marcar essa palavra.');
+      }
+      function dictModal(){
+        T.modal((box, close) => {
+          const draw = () => {
+            const d = S().get(item.pid)?.meta?.dict || []; box.innerHTML = '';
+            const inp = h('input.input', { placeholder: 'Adicionar palavra…', 'aria-label': 'Nova palavra do dicionário' });
+            const add = () => { const w = inp.value.trim(); if (!w) return; addToDict(w); draw(); };
+            inp.onkeydown = (e) => { if (e.key === 'Enter') add(); };
+            box.append(h('h2', 'Meu dicionário'), h('p.sub', 'Palavras do seu livro que estão certas do jeito que são (nomes, termos do seu mundo, regionalismos). A revisão de ortografia não marca nenhuma delas. Nomes das páginas da wiki já contam sozinhos.'),
+              h('div.row', { style: { gap: '8px' } }, inp, h('button.btn', { onclick: add }, icon('plus'), 'Adicionar')),
+              d.length ? h('div.dict-chips', d.map(w => h('span.chip', w, h('button.ra', { type: 'button', title: 'Tirar do dicionário', onclick: () => { S().update(item.pid, { meta: { dict: d.filter(x => x !== w) } }); markSpelling(); draw(); } }, '×')))) : h('p.muted', 'Ainda vazio.'),
+              h('div.modal-foot', h('span.grow'), h('button.btn.primary', { onclick: close }, 'Pronto')));
+          };
+          draw();
+        });
+      }
+      prose.addEventListener('input', () => { if (SP.on) markSpellSoon(); });
+      prose.addEventListener('click', () => {
+        if (!SP.on || !SP.errs.size) return;
+        const sel = getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
+        const node = sel.anchorNode; if (!node || node.nodeType !== 3) return;
+        const t = node.textContent, off = sel.anchorOffset;
+        let a = off, b = off; while (a > 0 && /[\p{L}\-'’]/u.test(t[a - 1])) a--; while (b < t.length && /[\p{L}\-'’]/u.test(t[b])) b++;
+        const w = t.slice(a, b); const k = spKey(w); const e = SP.errs.get(k);
+        if (!w || !e || SP.ign.has(k) || myDict().has(k)) return;
+        const rng = document.createRange(); rng.setStart(node, a); rng.setEnd(node, b);
+        const rect = rng.getBoundingClientRect();
+        const anchor = h('span', { style: { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', height: rect.height + 'px' } }); document.body.appendChild(anchor);
+        const fix = (to) => { const keep = /^[A-ZÀ-Ý]/.test(w) ? to.charAt(0).toUpperCase() + to.slice(1) : to; const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(rng); document.execCommand('insertText', false, keep); normalize(); save(); markSpelling(); pop.remove(); };
+        const pop = T.popover(anchor, h('div.stack.sp-pop', { style: { width: '240px' } },
+          h('b', 'Talvez você quis dizer:'),
+          h('div.sp-sugs', e.sug.map(sg => h('button.btn.sm.primary', { onclick: () => fix(sg) }, sg))),
+          h('button.btn.sm', { onclick: () => { addToDict(w); pop.remove(); } }, icon('book'), 'Adicionar ao meu dicionário'),
+          h('button.btn.sm.ghost', { onclick: () => { SP.ign.add(k); markSpelling(); pop.remove(); } }, 'Ignorar por agora')));
+        setTimeout(() => anchor.remove(), 60);
+      });
       function runAnalysis(){
         if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k));
         anHits = [];

@@ -1963,3 +1963,9 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 /* modo Livro: letras mais nítidas */
 .book-flow{ -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-kerning: normal; }
 .book-flow h1.ch-title, .book-flow .ch-num{ font-weight: inherit; }
+/* ortografia */
+::highlight(sp-err){ text-decoration: underline wavy hsl(0 85% 55%); text-decoration-thickness: 1.5px; text-underline-offset: 3px; background-color: hsl(0 90% 60% / .10); }
+.sp-pop .sp-sugs{ display:flex; flex-wrap:wrap; gap:6px; }
+.dict-chips{ display:flex; flex-wrap:wrap; gap:6px; max-height: 40vh; overflow:auto; }
+.dict-chips .chip{ display:inline-flex; align-items:center; gap:4px; }
+.dict-chips .ra{ border:0; background:transparent; cursor:pointer; color: var(--ink-3); font-size:14px; padding:0 2px; }
