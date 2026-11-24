@@ -11,11 +11,15 @@
     streak: { name: 'Constância', a: 'hsl(38 95% 62%)', b: 'hsl(14 85% 52%)' },
     book: { name: 'Estrutura do livro', a: 'hsl(150 60% 55%)', b: 'hsl(172 70% 34%)' },
     sprint: { name: 'Sprints', a: 'hsl(265 75% 70%)', b: 'hsl(245 55% 48%)' },
+    world: { name: 'Construção de mundo', a: 'hsl(95 55% 58%)', b: 'hsl(130 45% 36%)' },
+    craft: { name: 'Ofício e revisão', a: 'hsl(0 75% 68%)', b: 'hsl(340 60% 44%)' },
+    time: { name: 'Hora de escrever', a: 'hsl(215 50% 58%)', b: 'hsl(250 45% 30%)' },
+    journey: { name: 'Jornada do livro', a: 'hsl(48 95% 62%)', b: 'hsl(28 90% 46%)' },
   };
 
   // lista de insígnias: test(st) diz se já foi conquistada
-  const W = [100, 1667, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 60000, 70000, 80000, 90000, 100000, 125000, 150000];
-  const WNAME = { 100: 'Primeiras palavras', 1667: 'Ritmo de novembro', 50000: 'Romance curto', 100000: 'Cem mil' };
+  const W = [100, 1667, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 60000, 70000, 80000, 90000, 100000, 125000, 150000, 175000, 200000, 250000];
+  const WNAME = { 100: 'Primeiras palavras', 1667: 'Ritmo de novembro', 50000: 'Romance curto', 100000: 'Cem mil', 200000: 'Tomo épico', 250000: 'Saga' };
   const WDESC = { 100: 'As primeiras 100 palavras do livro', 1667: '1.667 palavras: o ritmo diário do desafio de novembro' };
   const LIST = [
     ...W.map(n => ({ id: 'w' + n, fam: 'words', label: n === 1667 ? '1667' : k1(n), name: WNAME[n] || T.fmt(n) + ' palavras', desc: WDESC[n] || 'O livro chegou a ' + T.fmt(n) + ' palavras', test: (st) => st.total >= n })),
@@ -41,6 +45,60 @@
     { id: 'sp1', fam: 'sprint', ic: 'clock', name: 'Primeiro sprint', desc: 'Terminou um sprint de escrita', test: (st) => st.sprints >= 1 },
     { id: 'sp10', fam: 'sprint', ic: 'clock', label: '10', name: 'Dez sprints', desc: 'Terminou 10 sprints', test: (st) => st.sprints >= 10 },
     { id: 'sp1k', fam: 'sprint', label: '1K', name: 'Sprint de mil', desc: '1.000 palavras num só sprint', test: (st) => st.bestSprint >= 1000 },
+    // mais dias, constância, capítulos e sprints
+    { id: 'd-3k', fam: 'day', label: '3K', name: 'Dia inspirado', desc: '3.000 palavras num só dia', test: (st) => st.bestDay >= 3000 },
+    { id: 'd-10k', fam: 'day', label: '10K', name: 'Dia lendário', desc: '10.000 palavras num só dia', test: (st) => st.bestDay >= 10000 },
+    { id: 'd-goal30', fam: 'day', ic: 'check', label: '30×', name: 'Trinta metas', desc: 'Bateu a meta do dia 30 vezes', test: (st) => st.goalDays >= 30 },
+    { id: 'd-double', fam: 'day', label: '2×', name: 'Em dobro', desc: 'Escreveu o dobro da meta num dia', test: (st) => st.doubleDays >= 1 },
+    { id: 'd-200', fam: 'day', label: '200', name: 'Duzentos dias', desc: 'Escreveu em 200 dias diferentes', test: (st) => st.days >= 200 },
+    { id: 'd-365', fam: 'day', label: '365', name: 'Um ano de dias', desc: 'Escreveu em 365 dias diferentes', test: (st) => st.days >= 365 },
+    { id: 's60', fam: 'streak', ic: 'flame', label: '60', name: 'Dois meses', desc: '60 dias seguidos escrevendo', test: (st) => st.bestStreak >= 60 },
+    { id: 's100', fam: 'streak', ic: 'flame', label: '100', name: 'Cem dias seguidos', desc: '100 dias seguidos escrevendo', test: (st) => st.bestStreak >= 100 },
+    { id: 'back', fam: 'streak', ic: 'feather', name: 'De volta', desc: 'Voltou a escrever depois de 14 dias parada', test: (st) => st.comeback },
+    { id: 'c30', fam: 'book', ic: 'chapter', label: '30', name: 'Trinta capítulos', desc: '30 capítulos com pelo menos 500 palavras', test: (st) => st.chapters >= 30 },
+    { id: 'c50', fam: 'book', ic: 'chapter', label: '50', name: 'Cinquenta capítulos', desc: '50 capítulos com pelo menos 500 palavras', test: (st) => st.chapters >= 50 },
+    { id: 'p3', fam: 'book', ic: 'part', label: '3', name: 'Três atos', desc: 'O livro tem três partes ou mais', test: (st) => st.parts >= 3 },
+    { id: 'longch', fam: 'book', label: '5K', name: 'Capítulo longo', desc: 'Um capítulo com 5.000 palavras ou mais', test: (st) => st.longest >= 5000 },
+    { id: 'done5', fam: 'book', ic: 'bookmark', label: '5', name: 'Cinco prontos', desc: '5 capítulos marcados como prontos', test: (st) => st.doneCh >= 5 },
+    { id: 'done-all', fam: 'book', ic: 'star', name: 'Tudo pronto', desc: 'Todos os capítulos marcados como prontos (mínimo 5)', test: (st) => st.chCount >= 5 && st.doneCh >= st.chCount },
+    { id: 'sp25', fam: 'sprint', ic: 'clock', label: '25', name: 'Vinte e cinco sprints', desc: 'Terminou 25 sprints', test: (st) => st.sprints >= 25 },
+    { id: 'sp2k', fam: 'sprint', label: '2K', name: 'Sprint relâmpago', desc: '2.000 palavras num só sprint', test: (st) => st.bestSprint >= 2000 },
+    // construção de mundo
+    { id: 'wk1', fam: 'world', ic: 'book', name: 'Primeira página', desc: 'Criou a primeira página na Wiki', test: (st) => st.pages >= 1 },
+    { id: 'wk10', fam: 'world', ic: 'book', label: '10', name: 'Enciclopédia', desc: '10 páginas na Wiki', test: (st) => st.pages >= 10 },
+    { id: 'wk50', fam: 'world', ic: 'book', label: '50', name: 'Biblioteca do mundo', desc: '50 páginas na Wiki', test: (st) => st.pages >= 50 },
+    { id: 'char5', fam: 'world', ic: 'person', label: '5', name: 'Elenco', desc: '5 personagens na Wiki', test: (st) => st.chars >= 5 },
+    { id: 'char15', fam: 'world', ic: 'person', label: '15', name: 'Multidão', desc: '15 personagens na Wiki', test: (st) => st.chars >= 15 },
+    { id: 'place5', fam: 'world', ic: 'pin', label: '5', name: 'Cartógrafa', desc: '5 lugares na Wiki', test: (st) => st.places >= 5 },
+    { id: 'map1', fam: 'world', ic: 'map', name: 'Primeiro mapa', desc: 'Desenhou um mapa do mundo', test: (st) => st.maps >= 1 },
+    { id: 'pins10', fam: 'world', ic: 'pin', label: '10', name: 'Mundo marcado', desc: '10 lugares marcados nos mapas', test: (st) => st.pins >= 10 },
+    { id: 'lang10', fam: 'world', label: 'Aa', name: 'Língua inventada', desc: '10 palavras no dicionário do seu idioma', test: (st) => st.langWords >= 10 },
+    { id: 'lang50', fam: 'world', label: '50', name: 'Poliglota do mundo', desc: '50 palavras no dicionário do seu idioma', test: (st) => st.langWords >= 50 },
+    { id: 'ev10', fam: 'world', ic: 'cal', label: '10', name: 'Linha do tempo', desc: '10 eventos no calendário da história', test: (st) => st.events >= 10 },
+    { id: 'idea10', fam: 'world', ic: 'spark', label: '10', name: 'Cabeça fervendo', desc: '10 ideias guardadas', test: (st) => st.ideas >= 10 },
+    // ofício e revisão
+    { id: 'cm1', fam: 'craft', ic: 'comment', name: 'Primeira nota', desc: 'Deixou o primeiro comentário no texto', test: (st) => st.comments >= 1 },
+    { id: 'cm25', fam: 'craft', ic: 'comment', label: '25', name: 'Leitora atenta', desc: '25 comentários no texto', test: (st) => st.comments >= 25 },
+    { id: 'cmres', fam: 'craft', ic: 'check', label: '10', name: 'Pendências resolvidas', desc: 'Resolveu 10 comentários', test: (st) => st.resolved >= 10 },
+    { id: 'v1', fam: 'craft', ic: 'camera', name: 'Primeira versão', desc: 'Salvou uma versão de um capítulo', test: (st) => st.versions >= 1 },
+    { id: 'v10', fam: 'craft', ic: 'history', label: '10', name: 'Arquivista', desc: '10 versões salvas', test: (st) => st.versions >= 10 },
+    { id: 'dict10', fam: 'craft', label: 'Aa', name: 'Meu vocabulário', desc: '10 palavras no seu dicionário pessoal', test: (st) => st.dict >= 10 },
+    { id: 'fmt', fam: 'craft', ic: 'type', name: 'Cara de livro', desc: 'Definiu a formatação geral do livro', test: (st) => st.fmt },
+    // hora de escrever (conta a partir de agora)
+    { id: 'h-night', fam: 'time', ic: 'moon', name: 'Coruja', desc: 'Escreveu depois da meia-noite', test: (st) => st.log.night },
+    { id: 'h-dawn', fam: 'time', ic: 'sun', name: 'Madrugadora', desc: 'Escreveu antes das 7 da manhã', test: (st) => st.log.dawn },
+    { id: 'h-lunch', fam: 'time', ic: 'clock', name: 'Hora do almoço', desc: 'Escreveu entre meio-dia e 14h', test: (st) => st.log.lunch },
+    { id: 'h-wknd', fam: 'time', ic: 'cal', name: 'Fim de semana', desc: 'Escreveu num sábado e num domingo', test: (st) => st.log.sat && st.log.sun },
+    { id: 'h-hol', fam: 'time', ic: 'star', name: 'Feriado de escrita', desc: 'Escreveu no Natal ou no Ano-Novo', test: (st) => st.log.holiday },
+    // jornada do livro
+    { id: 'j-25', fam: 'journey', label: '25%', name: 'Um quarto', desc: 'Chegou a 25% da meta do livro', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal * .25 },
+    { id: 'j-50', fam: 'journey', label: '50%', name: 'Meio do caminho', desc: 'Chegou a 50% da meta do livro', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal * .5 },
+    { id: 'j-75', fam: 'journey', label: '75%', name: 'Três quartos', desc: 'Chegou a 75% da meta do livro', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal * .75 },
+    { id: 'j-90', fam: 'journey', label: '90%', name: 'Reta final', desc: 'Chegou a 90% da meta do livro', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal * .9 },
+    { id: 'j-on', fam: 'journey', ic: 'check', name: 'Antes do prazo', desc: 'Bateu a meta do livro antes do prazo', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal && st.deadline && T.today() <= st.deadline },
+    { id: 'j-over', fam: 'journey', ic: 'spark', name: 'Passou da meta', desc: 'Escreveu 10% além da meta do livro', test: (st) => st.bookGoal > 0 && st.total >= st.bookGoal * 1.1 },
+    { id: 'j-month', fam: 'journey', label: '30d', name: 'Um mês de livro', desc: 'O livro tem um mês desde o primeiro dia de escrita', test: (st) => st.ageDays >= 30 },
+    { id: 'j-year', fam: 'journey', label: '1a', name: 'Um ano de livro', desc: 'O livro tem um ano desde o primeiro dia de escrita', test: (st) => st.ageDays >= 365 },
   ];
 
   function stats(pid){
@@ -61,7 +119,20 @@
     const isDone = (i) => /pronto|final|revisado/i.test(i.meta?.status || '');
     const doneCh = chs.filter(c => isDone(c) || (T.MS.docs(c).length && T.MS.docs(c).every(isDone))).length;
     const sp = p.meta?.sprints || [];
-    return { total, bookGoal: tg.book || 0, days, bestDay, goalDays, bestStreak, chapters, parts: all.filter(i => i.type === 'part').length, doneCh, sprints: sp.length, bestSprint: Math.max(0, ...sp.map(s => +s.words || 0)) };
+    const every = S().all(pid);
+    const pages = every.filter(i => i.type === 'page');
+    let comments = 0, resolved = 0; every.forEach(i => { if (i.type === 'snapshot') return; const cs = i.meta?.comments; if (cs) for (const k in cs) { comments++; if (cs[k]?.resolved) resolved++; } });
+    const maps = every.filter(i => i.type === 'map');
+    const keys = Object.keys(w).filter(k => w[k] > 0).sort();
+    let comeback = false; for (let i = 1; i < keys.length; i++) { if ((new Date(keys[i]) - new Date(keys[i - 1])) / 864e5 > 14) { comeback = true; break; } }
+    const longest = Math.max(0, ...chs.map(chWords));
+    return { total, bookGoal: tg.book || 0, deadline: tg.deadline || '', days, bestDay, goalDays, bestStreak, chapters, chCount: chs.length, parts: all.filter(i => i.type === 'part').length, doneCh, sprints: sp.length, bestSprint: Math.max(0, ...sp.map(s => +s.words || 0)),
+      doubleDays: tg.session ? vals.filter(v => v >= tg.session * 2).length : 0, comeback, longest,
+      pages: pages.length, chars: pages.filter(x => x.meta?.tpl === 'personagem').length, places: pages.filter(x => x.meta?.tpl === 'lugar').length,
+      maps: maps.length, pins: maps.reduce((a, m) => a + (m.meta?.pins || []).length, 0), langWords: every.filter(i => i.type === 'word').length,
+      events: every.filter(i => i.type === 'event').length, ideas: every.filter(i => i.type === 'idea').length,
+      comments, resolved, versions: every.filter(i => i.type === 'snapshot' && !i.meta?.auto).length, dict: (p.meta?.dict || []).length, fmt: !!p.meta?.fmt,
+      log: p.meta?.badgeLog || {}, ageDays: keys.length ? Math.floor((Date.now() - new Date(keys[0] + 'T12:00')) / 864e5) : 0 };
   }
 
   /* ----- desenho da insígnia (hexágono, emblema no meio) ----- */
@@ -144,6 +215,15 @@
     T.emit('badges-changed', { pid });
     return fresh;
   }
+  // anota quando você escreve (madrugada, almoço, fim de semana…) para as insígnias de hora
+  function logTime(pid){
+    const p = S().get(pid); if (!p) return; const d = new Date(); const hr = d.getHours(); const wd = d.getDay(); const md = (d.getMonth() + 1) * 100 + d.getDate();
+    const lg = Object.assign({}, p.meta?.badgeLog || {}); const before = JSON.stringify(lg);
+    if (hr < 4) lg.night = true; if (hr >= 4 && hr < 7) lg.dawn = true; if (hr >= 12 && hr < 14) lg.lunch = true;
+    if (wd === 6) lg.sat = true; if (wd === 0) lg.sun = true; if (md === 1225 || md === 101 || md === 1231) lg.holiday = true;
+    if (JSON.stringify(lg) !== before) S().update(pid, { meta: { badgeLog: lg } }, { silent: true });
+  }
+  T.on('session', (e) => { const pid = e?.pid || T.Shell?.pid; if (pid && T.Session && T.Session.today(pid) > 0) logTime(pid); });
   const later = T.debounce(() => { const pid = T.Shell?.pid; if (pid) check(pid); }, 1800);
   ['session', 'tree-changed', 'doc-saved'].forEach(ev => T.on(ev, later));
   T.on('project-opened', later);
