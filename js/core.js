@@ -159,6 +159,7 @@ window.T.STANDALONE = !(window.claude && typeof window.claude.use === 'function'
     indentin: 'M4 5h16M11 10h9M11 14h9M4 19h16M4 9l3 3-3 3',
     indentout: 'M4 5h16M11 10h9M11 14h9M4 19h16M7 9l-3 3 3 3',
     firstline: 'M10 6h10M4 10h16M4 14h16M4 18h16',
+    dot: 'M12 7.5a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9z',
     lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2',
     trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v4M8 21h8M9 17h6v4H9z',
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',

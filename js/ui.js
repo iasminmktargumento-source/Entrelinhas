@@ -57,6 +57,7 @@
       const b = h('button' + (it.danger ? '.danger' : '') + (it.on ? '.mi-is-on' : ''), { role: it.on !== undefined ? 'menuitemcheckbox' : 'menuitem', 'aria-checked': it.on !== undefined ? String(!!it.on) : null, onclick: () => { T.closeMenu(); it.fn && it.fn(); } }, it.icon ? icon(it.icon) : null, txt,
         it.key ? h('span.mi-k', it.key) : null, it.on !== undefined ? h('span.mi-on', it.on ? '✓' : '') : null);
       if (it.svg) { const sp = h('span.menu-svg'); sp.innerHTML = it.svg; b.prepend(sp); }
+      if (it.color) { b.classList.add('mi-color'); b.style.setProperty('--mi-c', it.color); }
       m.appendChild(b);
     });
     document.body.appendChild(m);

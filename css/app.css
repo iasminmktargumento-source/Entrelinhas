@@ -2145,3 +2145,11 @@ body:has(.ed .ed-status) .fabs .fab{ padding: 10px 15px 10px 12px; font-size: 13
 .prose[data-first="off"] p:not(.fl-1){ text-indent: 0 !important; }
 .prose p.fl-1{ text-indent: 1.4em !important; }
 .prose.book-flow p.fl-1{ text-indent: 1.15em !important; }
+/* etapa do capítulo (rascunho, rascunho 2, final…) */
+.stat-pill{ display:inline-flex; align-items:center; gap: 4px; padding: 1px 7px 1px 5px; border-radius: 99px; font-size: 10.5px; font-weight: 700; color: var(--ink-2); background: color-mix(in oklab, var(--sc) 18%, transparent); cursor: pointer; flex: none; line-height: 16px; }
+.stat-pill i{ width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.stat-pill:hover{ background: color-mix(in oklab, var(--sc) 30%, transparent); }
+.stat-pill.quiet{ background: transparent; padding: 1px 3px; }
+.stat-pill.quiet span{ display:none; }
+.tree-row:hover .stat-pill.quiet span{ display:inline; }
+.menu button.mi-color svg{ color: var(--mi-c); fill: var(--mi-c); }

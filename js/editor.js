@@ -1729,7 +1729,7 @@
         const title = h('input.input', { value: it.title || '', 'aria-label': 'Título' }); title.onchange = () => upd({ title: title.value });
         const syn = h('textarea.textarea', { placeholder: 'Sinopse: o que acontece aqui, em uma ou duas frases.' }); syn.value = it.meta?.synopsis || ''; syn.onchange = () => upd({ meta: { synopsis: syn.value } });
         const pov = h('input.input', { value: it.meta?.pov || '', list: 'povs-' + item.id, placeholder: 'quem narra' }); pov.onchange = () => upd({ meta: { pov: pov.value.trim() } });
-        const st = h('select.select', ['rascunho', 'revisando', 'pronto'].map(s => h('option', { value: s, selected: (it.meta?.status || 'rascunho') === s }, s))); st.onchange = () => upd({ meta: { status: st.value } });
+        const st = T.statusSelect(S().get(item.id)?.type === 'chapter' ? S().get(item.id) : it);
         const tens = h('input.range', { type: 'range', min: 0, max: 10, value: it.meta?.tension ?? 5 }); const tv = h('b.num', String(it.meta?.tension ?? 5));
         tens.oninput = () => tv.textContent = tens.value; tens.onchange = () => upd({ meta: { tension: +tens.value } });
         const comments = T.Comments.all(item.pid).filter(x => !x.c.resolved && (x.it.id === it.id || prose.querySelector('section[data-id="' + it.id + '"] span.cmt[data-c="' + x.cid + '"]'))).map(x => [x.cid, x.c]);

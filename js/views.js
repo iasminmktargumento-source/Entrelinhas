@@ -4,8 +4,32 @@
   const S = () => T.Store;
   T.Views = {};
 
-  const STATUS_COLORS = { rascunho: 'hsl(40 85% 55%)', revisando: 'hsl(200 80% 55%)', pronto: 'hsl(145 60% 45%)' };
-  T.STATUS_COLORS = STATUS_COLORS;
+  // etapas de um capítulo: [chave, nome, abreviação, cor]
+  T.STATUSES = [
+    ['ideia', 'Ideia / esboço', 'Ideia', 'hsl(270 40% 66%)'],
+    ['rascunho', 'Rascunho', 'R1', 'hsl(40 85% 55%)'],
+    ['rascunho2', 'Rascunho 2', 'R2', 'hsl(28 88% 55%)'],
+    ['rascunho3', 'Rascunho 3', 'R3', 'hsl(12 80% 56%)'],
+    ['revisando', 'Em revisão', 'Rev.', 'hsl(200 80% 55%)'],
+    ['beta', 'Com leitores beta', 'Beta', 'hsl(180 60% 42%)'],
+    ['pronto', 'Final', 'Final', 'hsl(145 60% 42%)'],
+  ];
+  const STATUS_COLORS = Object.fromEntries(T.STATUSES.map(x => [x[0], x[3]]));
+  T.STATUS_COLORS = new Proxy(STATUS_COLORS, { get: (o, k) => o[k] || 'hsl(220 12% 60%)' });
+  T.statusInfo = (k) => { k = k || 'rascunho'; const f = T.STATUSES.find(x => x[0] === k); return f ? { key: k, name: f[1], short: f[2], color: f[3] } : { key: k, name: k, short: k.length > 6 ? k.slice(0, 5) + '.' : k, color: 'hsl(220 12% 60%)' }; };
+  // capítulo com texto único: a etapa fica no capítulo (e no texto escondido dele)
+  T.statusOf = (it) => { if (!it) return 'rascunho'; if (it.meta?.status) return it.meta.status; if (it.type === 'chapter') { const k = S().children(it.pid, it.id); if (k.length === 1 && k[0].meta?.status) return k[0].meta.status; } return 'rascunho'; };
+  T.setStatus = (it, k) => {
+    S().update(it.id, { meta: { status: k } });
+    if (it.type === 'chapter') S().children(it.pid, it.id).filter(c => c.type === 'scene').forEach(c => { if (S().children(it.pid, it.id).length === 1) S().update(c.id, { meta: { status: k } }, { silent: true }); });
+    if (it.type === 'scene' && it.parent) { const ch = S().get(it.parent); if (ch && ch.type === 'chapter' && S().children(ch.pid, ch.id).length === 1) S().update(ch.id, { meta: { status: k } }, { silent: true }); }
+    T.emit('meta-changed', it.id); T.emit('tree-changed');
+  };
+  T.statusMenuItems = (it) => { const cur = T.statusOf(it); const items = T.STATUSES.map(([k, l, , c]) => ({ label: l, on: k === cur, icon: 'dot', fn: () => T.setStatus(it, k), color: c }));
+    if (!T.STATUSES.some(x => x[0] === cur)) items.push({ label: cur, on: true, fn: () => {} });
+    items.push({ label: 'Outra etapa…', icon: 'edit', fn: async () => { const v = await T.ask('Nome da etapa', { value: '', text: 'Ex.: Reescrita, Para cortar, Esperando a editora…' }); if (v && v.trim()) T.setStatus(it, v.trim()); } });
+    return items; };
+  T.statusSelect = (it, onChange) => { const cur = T.statusOf(it); const sel = h('select.select', { 'aria-label': 'Etapa' }, T.STATUSES.map(([k, l]) => h('option', { value: k, selected: k === cur }, l)), !T.STATUSES.some(x => x[0] === cur) ? h('option', { value: cur, selected: true }, cur) : null); sel.onchange = () => { T.setStatus(it, sel.value); onChange && onChange(sel.value); }; return sel; };
   const povHue = (s) => { let x = 0; for (const c of s || '') x = (x * 31 + c.charCodeAt(0)) % 360; return x; };
   T.povHue = povHue;
 
@@ -33,13 +57,13 @@
           const lh = k.meta?.label ?? 48;
           const title = h('input.ct', { value: k.title || '', 'aria-label': 'Título da ficha' }); title.onchange = () => { S().update(k.id, { title: title.value }); T.emit('tree-changed'); };
           const syn = h('textarea', { placeholder: 'Sinopse…', 'aria-label': 'Sinopse' }); syn.value = k.meta?.synopsis || ''; syn.onchange = () => S().update(k.id, { meta: { synopsis: syn.value } });
-          const st = h('select', { 'aria-label': 'Situação' }, ['rascunho', 'revisando', 'pronto'].map(s => h('option', { value: s, selected: (k.meta?.status || 'rascunho') === s }, s)));
+          const st = T.statusSelect(k);
           st.onchange = () => { S().update(k.id, { meta: { status: st.value } }); T.emit('tree-changed'); };
           const words = k.type === 'chapter' || k.type === 'part' ? T.MS.docs(k).reduce((a, d) => a + (d.meta?.words || 0), 0) : (k.meta?.words || 0);
           const card = h('div.card', { draggable: 'true' },
             h('button.icon-btn.sm.open', { title: 'Abrir texto', onclick: () => T.Shell.open({ kind: 'doc', ref: k.id }) }, icon('pop')),
             title, syn,
-            h('div.cf', h('span.stat', { style: { width: '8px', height: '8px', borderRadius: '50%', background: STATUS_COLORS[k.meta?.status || 'rascunho'] } }), st,
+            h('div.cf', h('span.stat', { style: { width: '8px', height: '8px', borderRadius: '50%', background: T.STATUS_COLORS[T.statusOf(k)] } }), st,
               k.meta?.pov ? h('span', { style: { fontWeight: 700, color: `hsl(${povHue(k.meta.pov)} 60% 38%)` } }, k.meta.pov) : null,
               h('span.num', { style: { marginLeft: 'auto' } }, T.fmt(words) + ' pal.'),
               h('button.icon-btn.sm', { title: 'Trocar a cor da etiqueta', style: { color: `hsl(${lh} 80% 50%)` }, onclick: () => { const i = T.HUES.indexOf(lh); S().update(k.id, { meta: { label: T.HUES[(i + 1) % T.HUES.length] } }); render(); } }, icon('spark'))));
