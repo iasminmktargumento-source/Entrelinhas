@@ -2137,3 +2137,11 @@ body:has(.ed .ed-status) .fabs .fab{ padding: 10px 15px 10px 12px; font-size: 13
 .size-ctl .sv{ min-width: 38px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 @container ed (max-width: 1180px){ .ed-tools .font-btn .lbl{ max-width: 84px; } .ed-tools .zoom-ctl .zv{ min-width: 40px; } }
 @container ed (max-width: 940px){ .ed-tools .tool-menu:not(.st-btn):not(.font-btn) .lbl{ display:none; } .ed-tools .st-btn .lbl{ max-width: 76px; } }
+
+/* formatação padrão do livro (alinhamento e primeira linha) */
+.prose[data-align="j"] p:not(.al-l):not(.al-c):not(.al-r){ text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+.prose[data-align="c"] p:not(.al-l):not(.al-r):not(.al-j){ text-align: center; text-indent: 0; }
+.prose[data-align="l"] p:not(.al-c):not(.al-r):not(.al-j){ text-align: left; }
+.prose[data-first="off"] p:not(.fl-1){ text-indent: 0 !important; }
+.prose p.fl-1{ text-indent: 1.4em !important; }
+.prose.book-flow p.fl-1{ text-indent: 1.15em !important; }

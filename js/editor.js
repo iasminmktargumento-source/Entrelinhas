@@ -53,7 +53,7 @@
 
   /* ---------- limpeza do HTML colado/gerado ---------- */
   const ALLOWED = { P: 1, B: 1, STRONG: 1, I: 1, EM: 1, MARK: 1, SPAN: 1, BR: 1, HR: 1, U: 1, S: 1, A: 1 };
-  const keepAttr = (e, a) => (e.tagName === 'SPAN' && (a.name === 'class' || a.name === 'data-c')) || (e.tagName === 'A' && (a.name === 'data-p' || (a.name === 'class' && a.value === 'wl'))) || (e.tagName === 'P' && a.name === 'class' && /^(al-[lcrj]|in-[1-5]|fl-0)(\s+(al-[lcrj]|in-[1-5]|fl-0))*$/.test(a.value.trim())) || (e.tagName === 'P' && a.name === 'data-st' && /^(t1|t2|t3|sub)$/.test(a.value)) || (e.tagName === 'MARK' && a.name === 'data-hl' && /^[a-z]+$/.test(a.value));
+  const keepAttr = (e, a) => (e.tagName === 'SPAN' && (a.name === 'class' || a.name === 'data-c')) || (e.tagName === 'A' && (a.name === 'data-p' || (a.name === 'class' && a.value === 'wl'))) || (e.tagName === 'P' && a.name === 'class' && /^(al-[lcrj]|in-[1-5]|fl-[01])(\s+(al-[lcrj]|in-[1-5]|fl-[01]))*$/.test(a.value.trim())) || (e.tagName === 'P' && a.name === 'data-st' && /^(t1|t2|t3|sub)$/.test(a.value)) || (e.tagName === 'MARK' && a.name === 'data-hl' && /^[a-z]+$/.test(a.value));
   T.MS.keepAttr = keepAttr;
   function cleanSection(sec){
     // garante que tudo esteja dentro de <p>
@@ -246,6 +246,10 @@
       let rail = null;
       const scroll = h('div.ed-scroll');
       const prose = h('div.prose', { contenteditable: 'true', spellcheck: 'true', lang: 'pt-BR' });
+      // formatação padrão do livro (vale também para o que você escrever depois)
+      const fmtOf = () => Object.assign({ align: 'l', first: 'on' }, S().get(item.pid)?.meta?.fmt || {});
+      const applyFmt = () => { const f = S().get(item.pid)?.meta?.fmt || {}; if (f.align) prose.dataset.align = f.align; else delete prose.dataset.align; if (f.first) prose.dataset.first = f.first; else delete prose.dataset.first; };
+      applyFmt();
       const tools = h('div.ed-tools.glass.lg');
       const status = h('div.ed-status.glass');
       const bgEl = h('div.ed-bg', { 'aria-hidden': 'true' }, h('div.ed-bg-host'), h('canvas.ed-bg-layer'), h('div.ed-bg-dim'));
@@ -380,7 +384,7 @@
           { head: 'Recuo' },
           { label: 'Aumentar recuo', desc: 'Afasta o parágrafo da margem esquerda', icon: 'indentin', key: 'Ctrl+]', fn: () => { restoreSel(); indentPara(1); } },
           { label: 'Diminuir recuo', desc: 'Traz o parágrafo de volta para a margem', icon: 'indentout', key: 'Ctrl+[', fn: () => { restoreSel(); indentPara(-1); } },
-          { label: 'Recuo da primeira linha', desc: 'O espacinho no começo do parágrafo', icon: 'firstline', on: !(curBlock()?.classList?.contains('fl-0')), fn: () => { restoreSel(); toggleFirstLine(); } },
+          { label: 'Recuo da primeira linha', desc: 'O espacinho no começo do parágrafo', icon: 'firstline', on: (() => { const b = curBlock(); return !!b?.classList?.contains('fl-1') || (fmtOf().first !== 'off' && !b?.classList?.contains('fl-0')); })(), fn: () => { restoreSel(); toggleFirstLine(); } },
           '-', { label: 'Aplicar no livro todo…', desc: 'Alinhar ou recuar todos os capítulos de uma vez', icon: 'book', fn: () => bookFormatModal() },
         ]);
         alBtn.classList.add('al-btn');
@@ -489,7 +493,7 @@
       function alignPara(k){
         const sel = getSelection(); if (!sel.rangeCount || !prose.contains(sel.anchorNode)) { T.toast('Clique no parágrafo que quer alinhar.'); return; }
         const r = sel.getRangeAt(0);
-        prose.querySelectorAll('section p').forEach(p => { if (r.intersectsNode(p)) { p.classList.remove('al-l', 'al-c', 'al-r', 'al-j'); if (k !== 'l') p.classList.add('al-' + k); if (!p.classList.length) p.removeAttribute('class'); } });
+        const def = fmtOf().align; prose.querySelectorAll('section p').forEach(p => { if (r.intersectsNode(p)) { p.classList.remove('al-l', 'al-c', 'al-r', 'al-j'); if (k !== def) p.classList.add('al-' + k); if (!p.classList.length) p.removeAttribute('class'); } });
         save();
       }
       // recuo do parágrafo (como o Aumentar/Diminuir recuo do Google Docs)
@@ -501,8 +505,9 @@
       }
       function toggleFirstLine(){
         const ps = selParas(); if (!ps.length) { T.toast('Clique no parágrafo primeiro.'); return; }
-        const on = !ps[0].classList.contains('fl-0');
-        ps.forEach(p => { p.classList.toggle('fl-0', on); if (!p.classList.length) p.removeAttribute('class'); });
+        const defOn = fmtOf().first !== 'off'; const isOn = (p) => p.classList.contains('fl-1') || (defOn && !p.classList.contains('fl-0'));
+        const want = !isOn(ps[0]);
+        ps.forEach(p => { p.classList.remove('fl-0', 'fl-1'); if (want !== defOn) p.classList.add(want ? 'fl-1' : 'fl-0'); if (!p.classList.length) p.removeAttribute('class'); });
         save();
       }
       // formatar o livro todo (todos os capítulos de uma vez)
@@ -517,13 +522,13 @@
           const nCh = T.MS.flat(pid).filter(i => i.type === 'chapter').length;
           box.append(
             h('h2', 'Formatar o livro todo'),
-            h('p.sub', 'Muda todos os capítulos de uma vez, até os anteriores (' + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + '). O que você escreveu não muda, só a aparência.'),
+            h('p.sub', 'Muda todos os capítulos de uma vez, até os anteriores (' + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + '), e vira o padrão do livro: capítulos e parágrafos novos já nascem assim. O que você escreveu não muda, só a aparência. (✓ = padrão atual)'),
             h('div.bf-grid',
               h('span.bf-l', 'Fonte'), fontSel,
               h('span.bf-l', 'Tamanho da letra'), sizeSel,
-              h('span.bf-l', 'Alinhamento'), h('div', seg('align', [['keep', 'Não mudar'], ['l', 'Esquerda'], ['j', 'Justificado'], ['c', 'Centralizado']]),
+              h('span.bf-l', 'Alinhamento'), h('div', seg('align', [['keep', 'Não mudar'], ['l', 'Esquerda'], ['j', 'Justificado'], ['c', 'Centralizado']].map(([k, l]) => [k, k !== 'keep' && fmtOf().align === k ? l + ' ✓' : l])),
                 h('div.bf-hint', chk('centered', 'Mudar também os parágrafos centralizados ou à direita (separadores, epígrafes…)'))),
-              h('span.bf-l', 'Primeira linha'), seg('first', [['keep', 'Não mudar'], ['on', 'Com recuo'], ['off', 'Sem recuo']]),
+              h('span.bf-l', 'Primeira linha'), seg('first', [['keep', 'Não mudar'], ['on', 'Com recuo'], ['off', 'Sem recuo']].map(([k, l]) => [k, k !== 'keep' && fmtOf().first === k ? l + ' ✓' : l])),
               h('span.bf-l', 'Recuos'), chk('clearIn', 'Tirar os recuos de parágrafo (voltar todos para a margem)')),
             h('p.muted', { style: { fontSize: '12px', margin: '10px 0 0' } }, 'A fonte e o tamanho valem para os modos Normal, Máquina e Composição. No modo Livro, a letra muda em Ver ▾ › Formato do livro.'),
             h('div.modal-foot',
@@ -535,15 +540,18 @@
         const pid = item.pid; save.flush();
         if (st.font !== 'keep' || st.size !== 'keep') ['normal', 'tw', 'compose'].forEach(m => { const pt = {}; if (st.font !== 'keep') pt.font = st.font; if (st.size !== 'keep') pt.size = +st.size; setView(m, pt); });
         const undo = []; let n = 0;
+        const oldFmt = S().get(pid)?.meta?.fmt || null;
+        if (st.align !== 'keep' || st.first !== 'keep') { const nf = Object.assign({}, oldFmt || {}); if (st.align !== 'keep') nf.align = st.align; if (st.first !== 'keep') nf.first = st.first; S().update(pid, { meta: { fmt: nf } }); applyFmt(); T.emit('book-fmt', { pid }); }
         if (st.align !== 'keep' || st.first !== 'keep' || st.clearIn) {
           T.MS.flat(pid).filter(i => i.body).forEach(it => {
             const t = document.createElement('template'); t.innerHTML = it.body;
             t.content.querySelectorAll('p').forEach(p => {
               if (st.align !== 'keep') {
                 const special = p.classList.contains('al-c') || p.classList.contains('al-r');
-                if (st.centered || !special || st.align === 'c') { p.classList.remove('al-l', 'al-c', 'al-r', 'al-j'); if (st.align !== 'l') p.classList.add('al-' + st.align); }
+                if (st.centered || !special || st.align === 'c') p.classList.remove('al-l', 'al-c', 'al-r', 'al-j');
+                else if (special) { /* separadores e epígrafes ficam como estão */ }
               }
-              if (st.first === 'on') p.classList.remove('fl-0'); else if (st.first === 'off') p.classList.add('fl-0');
+              if (st.first !== 'keep') p.classList.remove('fl-0', 'fl-1');
               if (st.clearIn) [1, 2, 3, 4, 5].forEach(k => p.classList.remove('in-' + k));
               if (!p.classList.length) p.removeAttribute('class');
             });
@@ -552,9 +560,9 @@
           });
         }
         rerender(); buildTools();
-        T.toast(n ? 'Pronto: ' + n + (n === 1 ? ' texto formatado.' : ' textos formatados.') : 'Pronto: aparência do livro atualizada.', undo.length ? { ms: 9000, action: { label: 'Desfazer', fn: () => { save.flush(); undo.forEach(([id, b]) => S().update(id, { body: b }, { silent: true })); rerender(); T.toast('Desfeito.'); } } } : {});
+        T.toast((n ? 'Pronto: ' + n + (n === 1 ? ' texto formatado.' : ' textos formatados.') : 'Pronto: aparência do livro atualizada.') + ' Vale também para o que você escrever daqui pra frente.', (undo.length || st.align !== 'keep' || st.first !== 'keep') ? { ms: 9000, action: { label: 'Desfazer', fn: () => { save.flush(); undo.forEach(([id, b]) => S().update(id, { body: b }, { silent: true })); S().update(pid, { meta: { fmt: oldFmt || { align: 'l', first: 'on' } } }); applyFmt(); rerender(); T.toast('Desfeito.'); } } } : {});
       }
-      function curAlign(){ const b = curBlock(); const c = b && b.className || ''; return (c.match(/\bal-([lcrj])\b/) || [])[1] || 'l'; }
+      function curAlign(){ const b = curBlock(); const c = b && b.className || ''; return (c.match(/\bal-([lcrj])\b/) || [])[1] || fmtOf().align; }
       function setBookCfg(patch){ const p = S().get(item.pid); S().update(item.pid, { meta: { book: Object.assign({}, bookCfg(p), patch) } }); if (bookEls) { bookEls.cfg = bookCfg(S().get(item.pid)); bookEls.tr = TRIMS[bookEls.cfg.trim]; prose.classList.toggle('dropcap', !!bookEls.cfg.dropcap); layoutBook(); } }
       function applyPaper(){
         const v = view(mode);
@@ -577,6 +585,7 @@
         }
       }
       const offFocus = T.on('focus-changed', () => { if (!destroyed) buildTools(); });
+      const offFmt = T.on('book-fmt', (e) => { if (!destroyed && e?.pid === item.pid) applyFmt(); });
       const offTargets = T.on('targets-changed', (e) => { if (!destroyed && e?.pid === item.pid) updateStatus(); });
       const offView = T.on('view-changed', (m) => { if (m === mode) { applyView(); buildTools(); } });
       function insertBreak(){ restoreSel(); document.execCommand('insertHTML', false, '<hr><p><br></p>'); save(); }
@@ -1839,7 +1848,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };
