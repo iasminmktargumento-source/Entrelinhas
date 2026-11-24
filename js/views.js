@@ -121,6 +121,22 @@
       let cur = 0; let d = new Date(); if (!(w[dkey(d)] >= min)) d = addD(d, -1); while (w[dkey(d)] >= min) { cur++; d = addD(d, -1); }
       return { cur, best };
     },
+    // meta do dia: se há prazo, quanto escrever por dia de escrita para chegar na meta do livro; senão, a meta mínima por dia
+    daily(pid){
+      const p = S().get(pid); if (!p) return { goal: 0, auto: false };
+      const tg = Object.assign({ book: 90000, session: 1000, deadline: '', days: [1, 2, 3, 4, 5] }, p.meta?.targets || {});
+      const W = T.Goals.written(pid); const today = new Date(); const wToday = W[dkey(today)] || 0;
+      const tal = (p.meta?.tallies || []).reduce((a, t) => a + (+t.n || 0), 0);
+      const total = T.MS.words(pid) + tal; const remaining = Math.max(0, tg.book - total);
+      if (!tg.deadline) return { goal: tg.session || 0, auto: false, remaining };
+      const end = parseD(tg.deadline);
+      if (dkey(end) < dkey(today)) return { goal: tg.session || 0, auto: false, remaining, late: true };
+      const wd = T.Goals.writeDays(today, end, tg.days && tg.days.length ? tg.days : [0, 1, 2, 3, 4, 5, 6]);
+      if (!wd) return { goal: tg.session || 0, auto: false, remaining };
+      const per = Math.ceil((remaining + wToday) / wd);
+      if (remaining <= 0) return { goal: tg.session || 0, auto: false, remaining: 0, done: true };
+      return { goal: Math.max(per, 1), auto: true, remaining, writeDays: wd, deadline: tg.deadline, min: tg.session || 0 };
+    },
     writeDays(a, b, days){ let n = 0; for (let d = new Date(a); dkey(d) <= dkey(b); d = addD(d, 1)) if (days.includes(d.getDay())) n++; return n; },
   };
 
@@ -213,7 +229,7 @@
         const sk = T.Goals.streaks(W, 1);
         const bestDay = Object.entries(W).sort((a, b) => b[1] - a[1])[0];
         const dayGoal = perDay && perDay > 0 ? perDay : tg.session;
-        const setT = (patch) => { S().update(pid, { meta: { targets: Object.assign({}, tg, patch) } }); render(); };
+        const setT = (patch) => { S().update(pid, { meta: { targets: Object.assign({}, tg, patch) } }); render(); T.emit('targets-changed', { pid }); };
         v.innerHTML = '';
         v.append(h('div.view-h', h('div.grow', h('h1', p.title), h('p', 'Metas, prazos e ritmo de escrita deste livro.')),
           h('button.btn', { onclick: () => tallyModal() }, icon('plus'), 'Registrar palavras'),
@@ -222,7 +238,7 @@
         const pace = behind == null ? null : behind > 0 ? h('span.gl-st.bad', '▼ ', T.fmt(behind), ' atrás do ritmo') : h('span.gl-st.ok', '▲ ', T.fmt(-behind), ' à frente do ritmo');
         v.append(h('div.tiles',
           h('div.tile.glass', h('div.k', 'Livro', h('button.tile-edit', { type: 'button', title: 'Mudar a meta do livro', onclick: () => { const i = v.querySelector('#tg-book'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => { i.focus(); i.select(); }, 350); } } }, icon('edit'), 'mudar meta')), h('div.v.num', T.fmt(total)), h('div.s', 'de ' + T.fmt(tg.book) + ' palavras · ' + Math.round(pct) + '%' + (tallyAll ? ' (inclui ' + T.fmt(tallyAll) + ' registradas à mão)' : '')), h('div.prog', h('i', { style: { width: pct + '%' } }))),
-          h('div.tile.glass', h('div.k', 'Hoje'), h('div.v.num', T.fmt(wToday)), h('div.s', 'meta do dia: ' + T.fmt(dayGoal) + (wToday >= dayGoal ? ' · batida ✓' : ' · faltam ' + T.fmt(dayGoal - wToday))), h('div.prog', h('i', { style: { width: Math.min(100, wToday / Math.max(1, dayGoal) * 100) + '%' } }))),
+          h('div.tile.glass', h('div.k', 'Hoje'), h('div.v.num', T.fmt(wToday)), h('div.s', (perDay && perDay > 0 ? 'meta do dia (pelo prazo): ' : 'meta do dia: ') + T.fmt(dayGoal) + (wToday >= dayGoal ? ' · batida ✓' : ' · faltam ' + T.fmt(dayGoal - wToday))), h('div.prog', h('i', { style: { width: Math.min(100, wToday / Math.max(1, dayGoal) * 100) + '%' } }))),
           h('div.tile.glass', h('div.k', 'Para bater o prazo'), h('div.v.num', perDay != null ? T.fmt(perDay) : '—'), h('div.s', end ? 'palavras por dia de escrita · ' + writeDays + ' dias de escrita em ' + daysLeft + ' dias' : 'defina início e fim do projeto abaixo'), pace),
           h('div.tile.glass', h('div.k', 'Previsão de término'), h('div.v.num', { style: { fontSize: '30px' } }, finish ? (finishIn === 0 ? 'meta batida!' : fmtDay(finish, true)) : '—'), h('div.s', finish ? (finishIn === 0 ? '' : 'no ritmo atual de ' + T.fmt(Math.round(avg)) + ' palavras/dia' + (end ? (finish <= end ? ' · antes do prazo ✓' : ' · depois do prazo') : '')) : 'escreva alguns dias para calcular')),
           h('div.tile.glass', h('div.k', 'Sequência'), h('div.v.num', String(sk.cur)), h('div.s', (sk.cur === 1 ? 'dia seguido' : 'dias seguidos') + ' · recorde: ' + sk.best)),

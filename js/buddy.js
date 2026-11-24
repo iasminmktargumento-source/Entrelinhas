@@ -273,7 +273,7 @@
       return { label: 'Sprint: +' + T.fmt(w) + ' palavras', pct: Math.min(100, el / (s.min * 600)), sub: Math.round(el / 60000) + ' de ' + s.min + ' min' };
     }
     if (!pid) return { label: 'Abra um livro para escrever', pct: 0, sub: '' };
-    const p = S().get(pid); const t = T.Session.today(pid); const g = p?.meta?.targets?.session || 0;
+    const p = S().get(pid); const t = T.Session.today(pid); const g = T.Goals ? T.Goals.daily(pid).goal : (p?.meta?.targets?.session || 0);
     return g ? { label: T.fmt(t) + ' / ' + T.fmt(g) + ' palavras hoje', pct: Math.min(100, t / g * 100), sub: Math.round(Math.min(100, t / g * 100)) + '%' } : { label: T.fmt(t) + ' palavras hoje', pct: 0, sub: 'sem meta diária' };
   }
   function updateFoot(){
@@ -310,7 +310,7 @@
     const offW = T.on('words-delta', ({ delta }) => {
       if (!delta || delta < 0) return; const c = B(); const n = Math.min(delta, 50);
       const today = new Date().toISOString().slice(0, 10); let bonus = 0;
-      const pid = T.Shell?.pid; const goal = pid ? S().get(pid)?.meta?.targets?.session || 0 : 0;
+      const pid = T.Shell?.pid; const goal = pid ? (T.Goals ? T.Goals.daily(pid).goal : S().get(pid)?.meta?.targets?.session || 0) : 0;
       if (goal && c.bonusDay !== today && T.Session.today(pid) >= goal) { bonus = 100; T.toast('Meta do dia batida! ' + c.name + ' ganhou 100 moedas de bônus.'); st.celebrate = performance.now() + 2500; }
       setB({ coins: c.coins + n + bonus, total: (c.total || 0) + n, bonusDay: bonus ? today : c.bonusDay });
       const cvr = cv.getBoundingClientRect(); st.pops.push({ t: performance.now(), n: n + bonus, x: cvr.width * .5 + (Math.random() - .5) * 30, y: cvr.height * .45 });

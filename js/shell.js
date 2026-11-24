@@ -335,12 +335,14 @@
   };
   function updateSession(){
     const el = document.getElementById('session-pill'); if (!el || !Shell.pid) return;
-    const p = S().get(Shell.pid); const t = T.Session.today(Shell.pid); const g = p.meta?.targets?.session || 0;
-    el.replaceChildren(h('span.sp-x', 'hoje '), T.fmt(t) + (g ? ' / ' + T.fmt(g) : ''), h('span.sp-x', ' palavras'));
-    el.title = 'Hoje: ' + T.fmt(t) + ' palavras' + (g ? ' de ' + T.fmt(g) : '');
+    const t = T.Session.today(Shell.pid); const dg = T.Goals.daily(Shell.pid); const g = dg.goal;
+    el.replaceChildren(h('span.sp-x', 'hoje '), T.fmt(t) + (g ? ' / ' + T.fmt(g) : ''), h('span.sp-x', ' palavras'), t >= g && g ? h('span.sp-ok', ' ✓') : null);
+    el.title = 'Hoje: ' + T.fmt(t) + ' palavras' + (g ? ' de ' + T.fmt(g) : '') + (dg.auto ? '. Meta do dia calculada para chegar a meta do livro até ' + T.fmtDate(dg.deadline) + ' (faltam ' + T.fmt(dg.remaining) + ' palavras em ' + dg.writeDays + ' dias de escrita).' : dg.done ? '. Meta do livro batida!' : '. Dica: coloque um prazo em Metas para a meta do dia ser calculada sozinha.') + ' Clique para ver as metas.';
+    if (!el.dataset.click) { el.dataset.click = '1'; el.style.cursor = 'pointer'; el.addEventListener('click', () => Shell.open({ kind: 'overview', ref: 'overview' })); }
     el.style.setProperty('--pc', g ? Math.min(100, t / g * 100) + '%' : '0%'); el.classList.toggle('has-goal', !!g);
   }
   T.on('session', updateSession);
+  T.on('targets-changed', updateSession);
   function updateSave(st){
     if (!saveDot) return;
     st = st || { saving: S().busy ? 1 : 0, failed: false, mode: S().mode };
