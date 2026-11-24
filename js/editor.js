@@ -53,7 +53,7 @@
 
   /* ---------- limpeza do HTML colado/gerado ---------- */
   const ALLOWED = { P: 1, B: 1, STRONG: 1, I: 1, EM: 1, MARK: 1, SPAN: 1, BR: 1, HR: 1, U: 1, S: 1, A: 1 };
-  const keepAttr = (e, a) => (e.tagName === 'SPAN' && (a.name === 'class' || a.name === 'data-c')) || (e.tagName === 'A' && (a.name === 'data-p' || (a.name === 'class' && a.value === 'wl'))) || (e.tagName === 'P' && a.name === 'class' && /^al-[lcrj]$/.test(a.value)) || (e.tagName === 'P' && a.name === 'data-st' && /^(t1|t2|t3|sub)$/.test(a.value)) || (e.tagName === 'MARK' && a.name === 'data-hl' && /^[a-z]+$/.test(a.value));
+  const keepAttr = (e, a) => (e.tagName === 'SPAN' && (a.name === 'class' || a.name === 'data-c')) || (e.tagName === 'A' && (a.name === 'data-p' || (a.name === 'class' && a.value === 'wl'))) || (e.tagName === 'P' && a.name === 'class' && /^(al-[lcrj]|in-[1-5]|fl-0)(\s+(al-[lcrj]|in-[1-5]|fl-0))*$/.test(a.value.trim())) || (e.tagName === 'P' && a.name === 'data-st' && /^(t1|t2|t3|sub)$/.test(a.value)) || (e.tagName === 'MARK' && a.name === 'data-hl' && /^[a-z]+$/.test(a.value));
   T.MS.keepAttr = keepAttr;
   function cleanSection(sec){
     // garante que tudo esteja dentro de <p>
@@ -310,6 +310,18 @@
           { label: 'Selecionar todo o texto', icon: 'selall', key: 'Ctrl+A', fn: () => selectAllText() },
         ]);
 
+        // 2b. alinhar e recuar
+        const AL = [['l', 'Alinhar à esquerda', 'alignl', 'Ctrl+Shift+L'], ['c', 'Centralizar', 'alignc', 'Ctrl+Shift+E'], ['r', 'Alinhar à direita', 'alignr', ''], ['j', 'Justificar', 'alignj', '']];
+        const ca = curAlign();
+        const alBtn = menuBtn((AL.find(a => a[0] === ca) || AL[0])[2], 'Alinhar', 'Alinhar, justificar e recuar o parágrafo', () => [
+          { head: 'Alinhamento do parágrafo' },
+          ...AL.map(([k, l, ic, key]) => ({ label: l, icon: ic, key: key || undefined, on: k === ca, fn: () => { restoreSel(); alignPara(k); buildTools(); } })),
+          { head: 'Recuo' },
+          { label: 'Aumentar recuo', desc: 'Afasta o parágrafo da margem esquerda', icon: 'indentin', key: 'Ctrl+]', fn: () => { restoreSel(); indentPara(1); } },
+          { label: 'Diminuir recuo', desc: 'Traz o parágrafo de volta para a margem', icon: 'indentout', key: 'Ctrl+[', fn: () => { restoreSel(); indentPara(-1); } },
+          { label: 'Recuo da primeira linha', desc: 'O espacinho no começo do parágrafo', icon: 'firstline', on: !(curBlock()?.classList?.contains('fl-0')), fn: () => { restoreSel(); toggleFirstLine(); } },
+        ]);
+        alBtn.classList.add('al-btn');
         // 3. como ver a página
         const verBtn = menuBtn('eye', 'Ver: ' + modeName, 'Jeito de escrever (normal, máquina, livro), foco, zoom, letras, cores e fundo', () => {
           const btn = verBtn; const single = !!view('book').single;
@@ -374,7 +386,7 @@
           reading ? h('button.btn.sm.live-chip', { type: 'button', title: 'Parar a leitura em voz alta', onclick: () => readAloud() }, h('span.dot'), 'Lendo · parar') : null,
         ];
         const sep = () => h('span.tsep');
-        tools.append(undoGrp, sep(), stBtn, fmtBtn, sep(), verBtn, revBtn, toolBtn, ...live, sep(), zoomCtl, ficha);
+        tools.append(undoGrp, sep(), stBtn, fmtBtn, alBtn, sep(), verBtn, revBtn, toolBtn, ...live, sep(), zoomCtl, ficha);
       }
       // guarda a seleção do texto ao abrir um menu, para os comandos agirem sobre ela
       let savedRange = null;
@@ -396,6 +408,20 @@
         prose.querySelectorAll('section p').forEach(p => { if (r.intersectsNode(p)) { p.classList.remove('al-l', 'al-c', 'al-r', 'al-j'); if (k !== 'l') p.classList.add('al-' + k); if (!p.classList.length) p.removeAttribute('class'); } });
         save();
       }
+      // recuo do parágrafo (como o Aumentar/Diminuir recuo do Google Docs)
+      function selParas(){ const sel = getSelection(); if (!sel.rangeCount || !prose.contains(sel.anchorNode)) return []; const r = sel.getRangeAt(0); return [...prose.querySelectorAll('section p')].filter(p => r.intersectsNode(p)); }
+      function indentPara(d){
+        const ps = selParas(); if (!ps.length) { T.toast('Clique no parágrafo que quer recuar.'); return; }
+        ps.forEach(p => { const cur = +((p.className.match(/\bin-(\d)\b/) || [])[1] || 0); const nx = Math.max(0, Math.min(5, cur + d)); p.classList.remove('in-' + cur); if (nx) p.classList.add('in-' + nx); if (!p.classList.length) p.removeAttribute('class'); });
+        save();
+      }
+      function toggleFirstLine(){
+        const ps = selParas(); if (!ps.length) { T.toast('Clique no parágrafo primeiro.'); return; }
+        const on = !ps[0].classList.contains('fl-0');
+        ps.forEach(p => { p.classList.toggle('fl-0', on); if (!p.classList.length) p.removeAttribute('class'); });
+        save();
+      }
+      function curAlign(){ const b = curBlock(); const c = b && b.className || ''; return (c.match(/\bal-([lcrj])\b/) || [])[1] || 'l'; }
       function setBookCfg(patch){ const p = S().get(item.pid); S().update(item.pid, { meta: { book: Object.assign({}, bookCfg(p), patch) } }); if (bookEls) { bookEls.cfg = bookCfg(S().get(item.pid)); bookEls.tr = TRIMS[bookEls.cfg.trim]; prose.classList.toggle('dropcap', !!bookEls.cfg.dropcap); layoutBook(); } }
       function applyPaper(){
         const v = view(mode);
@@ -1491,6 +1517,13 @@
       rail = T.Comments.rail(railCtx);
       scroll.addEventListener('scroll', () => { if (rail && rail.el.isConnected) rail.layout(); }, { passive: true });
       prose.addEventListener('input', () => { if (rail && rail.el.isConnected) requestAnimationFrame(() => rail.layout()); });
+      prose.addEventListener('keydown', (e) => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        const al = e.shiftKey && { KeyL: 'l', KeyE: 'c', KeyR: 'r', KeyJ: 'j' }[e.code];
+        if (al) { e.preventDefault(); e.stopPropagation(); alignPara(al); buildTools(); return; }
+        if (!e.shiftKey && (e.key === ']' || e.code === 'BracketRight')) { e.preventDefault(); indentPara(1); }
+        else if (!e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) { e.preventDefault(); indentPara(-1); }
+      });
       prose.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'm' || e.key === 'M' || e.code === 'KeyM')) { e.preventDefault(); addComment(); } });
       document.addEventListener('keydown', function bmKey(e){ if (destroyed) { document.removeEventListener('keydown', bmKey); return; } if ((e.ctrlKey || e.metaKey) && e.altKey && e.code === 'KeyP' && ed.contains(document.activeElement) || ((e.ctrlKey || e.metaKey) && e.altKey && e.code === 'KeyP' && document.activeElement === document.body && ed.isConnected && ed.offsetParent)) { const last = S().get(item.id)?.meta?.lastPos; if (last) { e.preventDefault(); goToPos(last); } } });
       let tip = null;

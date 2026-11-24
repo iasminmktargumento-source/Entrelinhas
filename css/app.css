@@ -2075,3 +2075,12 @@ html.dark .bdg-sec, .dark .bdg-sec{ background: hsl(0 0% 100% / .04); }
 
 .bdg-art.off .bdg-num{ color: hsl(220 10% 58%); font-size: 18px; }
 .bdg-art.off .bdg-em svg.bdg-lk{ width: 14%; margin-top: 3px; }
+
+/* recuo e primeira linha */
+.prose p.in-1{ margin-left: 2em; } .prose p.in-2{ margin-left: 4em; } .prose p.in-3{ margin-left: 6em; } .prose p.in-4{ margin-left: 8em; } .prose p.in-5{ margin-left: 10em; }
+.prose p.fl-0{ text-indent: 0 !important; }
+.book-flow p.in-1{ margin-left: 2em; } .book-flow p.in-2{ margin-left: 4em; } .book-flow p.in-3{ margin-left: 6em; } .book-flow p.in-4{ margin-left: 8em; } .book-flow p.in-5{ margin-left: 10em; }
+.book-flow p.fl-0{ text-indent: 0 !important; }
+.book-flow p.al-c{ text-align:center; text-indent:0; } .book-flow p.al-r{ text-align:right; text-indent:0; } .book-flow p.al-j{ text-align:justify; hyphens:auto; }
+@container ed (max-width: 1180px){ .ed-tools .al-btn .lbl, .ed-tools .ficha-btn .lbl{ display:none; } .ed-tools .tool-menu, .ed-tools .ficha-btn{ padding: 6px 9px; } .ed-tools .tsep{ margin: 0 2px; } }
+@container ed (max-width: 1000px){ .ed-tools .st-btn .lbl{ max-width: 72px; } .ed-tools .tool-menu .caret{ display:none; } }

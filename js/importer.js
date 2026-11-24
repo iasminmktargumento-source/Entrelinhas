@@ -103,7 +103,7 @@
       if ((chL && p.level === chL) || (!chL && short && CH_LINE.test(p.text))) { newCh(p.text); return; }
       if (p.level > 0) { if (!ch) newCh(''); scene.paras.push('<p><strong>' + p.html + '</strong></p>'); return; }
       // sem divisão em cenas: linhas como "* * *" ficam no texto do jeito que estão
-      if (SEP.test(p.text)) { if (!ch) newCh(''); scene.paras.push('<p style="text-align:center">' + p.html + '</p>'); return; }
+      if (SEP.test(p.text)) { if (!ch) newCh(''); scene.paras.push('<p class="al-c">' + p.html + '</p>'); return; }
       if (!ch) newCh('');
       scene.paras.push('<p>' + p.html + '</p>');
     });
