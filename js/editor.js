@@ -67,6 +67,7 @@
   function serialize(sec){
     const c = sec.cloneNode(true);
     c.querySelectorAll('.reading,.hit').forEach(e => { if (e.tagName === 'SPAN' && !e.dataset.c) e.replaceWith(...e.childNodes); else e.classList.remove('reading', 'hit'); });
+    c.querySelectorAll('span.nsp').forEach(e => e.replaceWith(...e.childNodes));
     c.querySelectorAll('*').forEach(e => { if (!ALLOWED[e.tagName] || (e.tagName === 'A' && !e.dataset.p)) e.replaceWith(...e.childNodes); else { [...e.attributes].forEach(a => { if (!keepAttr(e, a)) e.removeAttribute(a.name); }); } });
     let html = c.innerHTML.replace(/<p><br><\/p>$/, '').trim();
     return html;
@@ -1411,9 +1412,30 @@
         SP.on = !SP.on; prose.spellcheck = !SP.on;
         if (SP.on) checkSpelling(); else { if (HLN) CSS.highlights.delete('sp-err'); buildTools(); }
       }
+      // palavras do seu dicionário (e nomes da Wiki) deixam de ganhar o sublinhado vermelho do navegador
+      function protectDict(force){
+        if (destroyed) return;
+        const dict = myDict(); const sel = getSelection(); let changed = false;
+        const caretP = !force && sel.anchorNode && prose.contains(sel.anchorNode) ? (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement)?.closest('section > p, section > h1, section > h2') : null;
+        prose.querySelectorAll('section > p, section > h1, section > h2').forEach(p => {
+          if (p === caretP) return;
+          // tira marcas que não servem mais (palavra mudou ou saiu do dicionário)
+          p.querySelectorAll('span.nsp').forEach(sp => { if (!dict.has(spKey(sp.textContent))) { const par = sp.parentNode; sp.replaceWith(...sp.childNodes); par.normalize(); changed = true; } });
+          if (!dict.size) return;
+          const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.parentElement.closest('span.nsp') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+          const nodes = []; let n; while ((n = walker.nextNode())) nodes.push(n);
+          nodes.forEach(tn => {
+            const txt = tn.textContent; const hits = []; let m; WORD_RE.lastIndex = 0;
+            while ((m = WORD_RE.exec(txt))) if (dict.has(spKey(m[0]))) hits.push([m.index, m[0].length]);
+            for (let i = hits.length - 1; i >= 0; i--) { const [a, len] = hits[i]; const mid = tn.splitText(a); mid.splitText(len); const sp = document.createElement('span'); sp.className = 'nsp'; sp.setAttribute('spellcheck', 'false'); mid.replaceWith(sp); sp.appendChild(mid); changed = true; }
+          });
+        });
+        if (changed) { decorate && decorate(); markSpellSoon(); }
+      }
+      const protectSoon = T.debounce(() => protectDict(false), 1500);
       function addToDict(word){
         const p = S().get(item.pid); const d = [...(p.meta?.dict || [])]; if (!d.some(x => spKey(x) === spKey(word))) d.push(word);
-        S().update(item.pid, { meta: { dict: d.sort((a, b) => a.localeCompare(b, 'pt')) } }); markSpelling();
+        S().update(item.pid, { meta: { dict: d.sort((a, b) => a.localeCompare(b, 'pt')) } }); markSpelling(); protectDict(true);
         T.toast('“' + word + '” entrou no seu dicionário. Não vou mais marcar essa palavra.');
       }
       function dictModal(){
@@ -1817,7 +1839,7 @@
           onClose: () => { composeOn = false; if (composeEls) composeEls.wrap.classList.remove('rail-on'); composeEls = null; if (rail && rail.el.isConnected) rail.el.remove(); back.appendChild(prose); applyMode(); } });
       }
 
-      function rerender(){ docs = T.MS.docs(S().get(item.id) || item); render(); decorate && decorate(); }
+      function rerender(){ docs = T.MS.docs(S().get(item.id) || item); render(); decorate && decorate(); setTimeout(() => protectDict(true), 50); }
       const offItems = T.on('items', (ev) => {
         if (destroyed || !ev.id) return;
         if (ev.kind === 'remove' && ev.id === item.id) return;
@@ -1842,6 +1864,9 @@
       const closeAC = T.Ent.autocomplete(prose, item.pid, () => save());
       const decorate = T.debounce(() => { if (!destroyed) T.Ent.decorate(prose, item.pid); }, 700);
       prose.addEventListener('input', decorate);
+      prose.addEventListener('input', protectSoon);
+      setTimeout(() => protectDict(true), 400);
+      const offDict = T.on('items', (ev) => { if (ev.item?.id === item.pid || ev.item?.type === 'page') protectSoon(); });
       const offEnt = T.on('items', (ev) => { if (['page', 'word', 'lang'].includes(ev.item?.type)) decorate(); });
       render();
       decorate();
@@ -1850,7 +1875,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };
