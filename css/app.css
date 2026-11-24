@@ -1997,3 +1997,27 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .tree-row.sticky .row-acts .ra:last-child{ display:none; }
 .tree-row.sticky:hover .row-acts .ra:last-child, .tree-row.sticky:focus-within .row-acts .ra:last-child{ display:grid; }
 .tree-row.sticky .row-acts .ra:first-child{ color: var(--accent-ink); background: var(--accent-soft); }
+
+/* barra do editor: menos botões, cada grupo com nome */
+.ed-tools{ gap: 4px; }
+.ed-tools .tsep{ width:1px; height: 22px; background: var(--glass-line); margin: 0 4px; flex:none; }
+.ed-tools .tool-menu, .ed-tools .ficha-btn{ display:inline-flex; align-items:center; gap: 6px; padding: 6px 11px; font-weight: 600; }
+.ed-tools .tool-menu svg, .ed-tools .ficha-btn svg{ width: 15px; height: 15px; }
+.ed-tools .tool-menu.on, .ed-tools .ficha-btn.on{ background: var(--accent-soft); color: var(--accent-ink); }
+.ed-tools .st-btn .lbl{ min-width: 0; max-width: 110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.live-chip{ display:inline-flex; align-items:center; gap:6px; background: hsl(350 80% 55% / .14); color: hsl(350 60% 40%); font-weight:700; }
+.live-chip .dot{ width:8px; height:8px; border-radius:50%; background: hsl(350 80% 55%); animation: pulse-dot 1.2s ease-in-out infinite; }
+@keyframes pulse-dot{ 50%{ opacity:.35; } }
+@container ed (max-width: 980px){ .ed-tools .ficha-btn .lbl{ display:none; } }
+@container ed (max-width: 860px){ .ed-tools .tool-menu .lbl{ display:inline; } .ed-tools .st-btn .lbl{ max-width: 64px; } }
+@container ed (max-width: 700px){ .ed-tools .tool-menu:not(.st-btn) .lbl{ display:none; } }
+/* itens de menu com explicação, atalho e marca de ligado */
+.menu{ max-width: 360px; }
+.menu .mi-t{ display:flex; flex-direction:column; gap: 1px; flex:1; min-width:0; }
+.menu .mi-l{ font-weight: 500; }
+.menu .mi-d{ font-size: 11.5px; line-height: 1.3; color: var(--ink-3); white-space: normal; }
+.menu .mi-k{ margin-left: 10px; font-size: 11px; color: var(--ink-3); white-space: nowrap; flex:none; }
+.menu .mi-on{ width: 16px; flex:none; text-align:center; color: var(--accent-ink); font-weight: 800; }
+.menu button.mi-is-on{ background: hsl(var(--hue) 60% 60% / .08); }
+.menu button.mi-is-on svg{ color: var(--accent-ink); }
+.menu .mh + button, .menu .mh{ margin-top: 2px; }

@@ -279,83 +279,102 @@
       function buildTools(){
         tools.innerHTML = '';
         const z = view(mode).zoom;
+        // botões agrupados em menus para a barra caber numa linha só
+        const menuBtn = (ic, label, title, items) => h('button.btn.sm.tool-menu', { type: 'button', title, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, items()) }, icon(ic), h('span.lbl', label), h('span.caret', '▾'));
+        const focusOn = !!T.Shell?.el?.classList.contains('focus');
+        const cb = curBlock(); const curSt = cb?.dataset?.st || '';
+        const stBtn = h('button.btn.sm.tool-menu.st-btn', { type: 'button', title: 'Tipo de parágrafo: texto normal, título ou subtítulo', onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, [
+          { head: 'Este parágrafo é…' },
+          ...PSTYLES.map(([k, l]) => ({ label: l, on: k === curSt, fn: () => { restoreSel(); setPStyle(k); } })),
+          '-', { label: 'Guia do documento', desc: 'Lista os títulos ao lado, para pular entre eles', icon: 'list', on: !!S().prefs().outline, fn: () => toggleOutline() },
+        ]) }, icon('text'), h('span.lbl', (PSTYLES.find(x => x[0] === curSt) || PSTYLES[0])[1]), h('span.caret', '▾'));
+        const anOn = AN.len || AN.weak;
+        const MODES = [['normal', 'Normal', 'text', 'Página simples, que vai rolando'], ['tw', 'Máquina de escrever', 'feather', 'Folha de papel, linha sempre no meio da tela'], ['book', 'Livro', 'book', 'Páginas de verdade, como o livro impresso']];
+        const modeName = { normal: 'Normal', tw: 'Máquina', book: 'Livro' }[mode];
+        const typeOpts = { bg: (a) => bgPicker(a), bgName: () => { const c = bgCfgOf(mode); return !c ? 'Nenhum' : c.bg.kind === 'scene' ? T.Scenes.get(c.bg.id).name : (c.bg.name || 'Meu fundo'); }, align: alignPara, bookCfg: () => bookCfg(S().get(item.pid)), setBook: (patch) => setBookCfg(patch) };
+        const kit = T.typeKit(mode, false); const soundOn = kit && kit !== 'off';
+
+        // 1. desfazer / refazer
+        const ubtn = (ic, t, c) => h('button.btn.sm.icon-only', { type: 'button', title: t, 'aria-label': t, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: () => cmd(c) }, icon(ic));
+        const undoGrp = h('div.ed-undo', { role: 'group', 'aria-label': 'Desfazer e refazer' }, ubtn('undo', 'Desfazer (Ctrl+Z)', 'undo'), ubtn('redo', 'Refazer (Ctrl+Y)', 'redo'));
+
+        // 2. formatar o texto
+        const fmtBtn = menuBtn('bold', 'Formatar', 'Negrito, itálico, sublinhado, pausa no capítulo, selecionar tudo', () => [
+          { head: 'Letras' },
+          { label: 'Negrito', icon: 'bold', key: 'Ctrl+B', fn: () => cmd('bold') },
+          { label: 'Itálico', icon: 'italic', key: 'Ctrl+I', fn: () => cmd('italic') },
+          { label: 'Sublinhado', icon: 'underline', key: 'Ctrl+U', fn: () => cmd('underline') },
+          { head: 'Texto' },
+          { label: 'Pausa no capítulo (⁂)', desc: 'Uma linha de respiro entre dois momentos', icon: 'orn', fn: () => insertBreak() },
+          { label: 'Travessão automático', desc: 'Troca - por — enquanto você escreve', icon: 'edit', on: S().prefs().autoDash !== false, fn: () => { S().setPrefs({ autoDash: S().prefs().autoDash === false }); T.toast(S().prefs().autoDash !== false ? 'Travessão automático ligado.' : 'Travessão automático desligado.'); } },
+          { label: 'Selecionar todo o texto', icon: 'selall', key: 'Ctrl+A', fn: () => selectAllText() },
+        ]);
+
+        // 3. como ver a página
+        const verBtn = menuBtn('eye', 'Ver: ' + modeName, 'Jeito de escrever (normal, máquina, livro), foco, zoom, letras, cores e fundo', () => {
+          const btn = verBtn; const single = !!view('book').single;
+          return [
+            { head: 'Jeito de escrever' },
+            ...MODES.map(([m, l, ic, d]) => ({ label: l, desc: d, icon: ic, on: m === mode, fn: () => setMode(m) })),
+            ...(mode === 'book' ? [{ head: 'Páginas do livro' },
+              { label: 'Uma página por vez', on: single, fn: () => { if (!single) { const col = geo ? (OR() ? spread * 2 - (spread > 0 ? 1 : 0) : spread * 2) : 0; setView('book', { single: true }); go(Math.max(0, col), false); } } },
+              { label: 'Duas páginas lado a lado', on: !single, fn: () => { if (single) { const sp = OR() ? Math.floor((spread + 1) / 2) : Math.floor(spread / 2); setView('book', { single: false }); go(sp, false); } } },
+              { label: 'Formato do livro…', desc: 'Tamanho da página, margens, letra', icon: 'gear', fn: () => bookSettings(btn) }] : []),
+            ...(mode === 'tw' ? [{ head: 'Máquina de escrever' }, { label: 'Luz sobre o papel', icon: 'sun', on: view('tw').light !== false, fn: () => { const lo = view('tw').light !== false; setView('tw', { light: !lo }); } }] : []),
+            { head: 'Tela' },
+            { label: 'Modo foco', desc: 'Esconde tudo, fica só o texto (Esc sai)', icon: 'focus', on: focusOn, fn: () => T.emit('focus-mode') },
+            { label: 'Modo composição', desc: 'Escrever sobre uma imagem ou vídeo em tela cheia', icon: 'image', fn: () => openCompose() },
+            { label: 'Ver todas as páginas', desc: 'Miniaturas lado a lado; toque numa para ir até ela', icon: 'grid', fn: () => pagesOverview() },
+            { head: 'Aparência' },
+            { label: 'Letras e cores…', desc: 'Tamanho, fonte, alinhamento, cor do papel', icon: 'type', fn: () => T.typePanel(btn, mode, typeOpts) },
+            { label: 'Fundo atrás da página…', desc: 'Cenas, imagens ou vídeos', icon: 'image', fn: () => bgPicker(btn) },
+            { label: 'Som das teclas…', desc: soundOn ? 'Ligado: ' + T.Sound.KITS[kit] : 'Desligado', icon: soundOn ? 'sound' : 'mute', fn: () => T.soundPanel(btn, mode, () => buildTools()) },
+          ];
+        });
+
+        // 4. revisar
+        const revBtn = menuBtn('check', 'Revisar', 'Localizar, análise do texto, ortografia, comentários e versões', () => [
+          { label: 'Localizar e substituir', icon: 'search', key: 'Ctrl+F', fn: () => findBar() },
+          { head: 'Análise do texto' },
+          { label: 'Tamanho das frases', desc: 'Pinta frases curtas, médias e longas', icon: 'chart', on: !!AN.len, fn: () => setAn('len') },
+          { label: 'Verbo fraco + advérbio', desc: 'Marca “andou rapidamente” e parecidos', icon: 'spark', on: !!AN.weak, fn: () => setAn('weak') },
+          ...(anOn ? [{ label: 'Desligar a análise', icon: 'x', fn: () => { AN.len = AN.weak = false; runAnalysis(); buildTools(); } }] : []),
+          { head: 'Ortografia' },
+          { label: SP.busy ? 'Revisando…' : 'Revisar ortografia', desc: 'Sublinha palavras com erro (usa o Claude)', icon: 'check', on: !!SP.on, fn: () => toggleSpell() },
+          SP.on ? { label: 'Revisar de novo', icon: 'replace', fn: () => checkSpelling() } : null,
+          { label: 'Meu dicionário…', desc: 'Palavras do seu mundo que não são erro', icon: 'book', fn: () => dictModal() },
+          { head: 'Comentários' },
+          { label: 'Comentar o trecho selecionado', icon: 'comment', key: 'Ctrl+Alt+M', fn: () => { restoreSel(); addComment(); } },
+          { label: 'Comentários na lateral', icon: 'comment', on: S().prefs().cmtRail !== false, fn: () => { S().setPrefs({ cmtRail: S().prefs().cmtRail === false }); updateRail(); } },
+          { label: 'Todos os comentários…', icon: 'list', fn: () => T.Comments.panel(item.pid, { here: railCtx }) },
+          { head: 'Versões' },
+          { label: 'Salvar uma versão agora', desc: 'Uma cópia deste capítulo como está', icon: 'camera', fn: () => snapshot() },
+          { label: 'Ver versões salvas…', desc: 'Comparar e voltar para uma anterior', icon: 'history', fn: () => { save.flush(); T.Versions.browse(currentSectionItem(), () => rerender()); } },
+        ]);
+        if (anOn || SP.on) revBtn.classList.add('on');
+
+        // 5. ferramentas
+        const toolBtn = menuBtn('feather', 'Ferramentas', 'Onde parei, ditado e leitura em voz alta', () => [
+          { label: 'Onde parei e marca-páginas…', desc: 'Volta ao ponto em que você escreveu por último', icon: 'bookmark', fn: () => bookmarkMenu(toolBtn) },
+          { head: 'Voz' },
+          { label: dictOn ? 'Parar o ditado' : 'Ditar', desc: 'Fale e o texto aparece no cursor (diga “vírgula”, “ponto”…)', icon: 'voice', on: dictOn, fn: () => toggleDictation() },
+          { label: reading ? 'Parar a leitura' : 'Ler em voz alta', icon: 'sound', fn: () => readAloud() },
+          { label: 'Vozes da narração…', icon: 'sound', fn: () => T.Narr.settings(item.pid, [...prose.querySelectorAll('section p')]) },
+          { label: T.Narr.hasRec(currentSectionItem()) ? 'Minha voz neste capítulo ✓' : 'Gravar minha voz neste capítulo…', icon: 'voice', fn: () => T.Narr.recModal(currentSectionItem(), () => buildTools()) },
+        ]);
+
         const zoomCtl = h('div.zoom-ctl', { role: 'group', 'aria-label': 'Zoom' },
           h('button', { type: 'button', title: 'Diminuir zoom (Ctrl −)', onclick: () => setView(mode, { zoom: Math.max(50, z - 10) }) }, '−'),
           h('button.zv', { type: 'button', title: 'Voltar para 100% (Ctrl 0)', onclick: () => setView(mode, { zoom: 100 }) }, z + '%'),
           h('button', { type: 'button', title: 'Aumentar zoom (Ctrl +)', onclick: () => setView(mode, { zoom: Math.min(220, z + 10) }) }, '+'));
-        // botões agrupados em menus para a barra caber numa linha só
-        const menuBtn = (ic, label, title, items) => h('button.btn.sm.tool-menu', { type: 'button', title, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, items()) }, icon(ic), h('span.lbl', label), h('span.caret', '▾'));
-        const focusOn = !!T.Shell?.el?.classList.contains('focus');
-        const special = h('div.seg.ed-special', { role: 'group', 'aria-label': 'Modos especiais' },
-          h('button', { type: 'button', title: 'Modo composição: escrever sobre uma imagem, vídeo ou cena em tela cheia', onclick: () => openCompose() }, icon('image'), h('span.lbl', 'Composição')),
-          h('button' + (focusOn ? '.on' : ''), { type: 'button', title: focusOn ? 'Sair do modo foco (Esc)' : 'Modo foco: esconde o resto da tela', onclick: () => T.emit('focus-mode') }, icon('focus'), h('span.lbl', 'Foco')));
-        const cb = curBlock(); const curSt = cb?.dataset?.st || '';
-        const stBtn = h('button.btn.sm.tool-menu.st-btn', { type: 'button', title: 'Estilo do parágrafo: texto normal, títulos ou subtítulo (aparecem no guia do documento)', onclick: (e) => T.menuAt(e.currentTarget, [
-          ...PSTYLES.map(([k, l]) => ({ label: (k === curSt ? '● ' : '') + l, fn: () => setPStyle(k) })),
-          '-', { label: (S().prefs().outline ? '✓ ' : '') + 'Mostrar o guia do documento', icon: 'list', fn: () => toggleOutline() },
-        ]) }, h('span.lbl', (PSTYLES.find(x => x[0] === curSt) || PSTYLES[0])[1]), h('span.caret', '▾'));
-        const anOn = AN.len || AN.weak;
-        const anBtn = h('button.btn.sm.tool-menu.an-btn' + (anOn ? '.on' : ''), { type: 'button', title: 'Análise do texto: tamanho das frases e verbos fracos com advérbio (liga e desliga quando quiser)', onclick: (e) => T.menuAt(e.currentTarget, [
-          { head: 'Análise do texto' },
-          { label: (AN.len ? '✓ ' : '') + 'Colorir o tamanho das frases', icon: 'chart', fn: () => setAn('len') },
-          { label: (AN.weak ? '✓ ' : '') + 'Achar verbo fraco + advérbio', icon: 'spark', fn: () => setAn('weak') },
-          ...(anOn ? ['-', { label: 'Desligar tudo', icon: 'x', fn: () => { AN.len = AN.weak = false; runAnalysis(); buildTools(); } }] : []),
-          '-', { head: 'Ortografia' },
-          { label: (SP.on ? '✓ ' : '') + (SP.busy ? 'Revisando…' : 'Revisar ortografia (Claude)'), icon: 'check', fn: () => toggleSpell() },
-          SP.on ? { label: 'Revisar de novo', icon: 'replace', fn: () => checkSpelling() } : null,
-          { label: 'Meu dicionário…', icon: 'book', fn: () => dictModal() },
-        ]) }, icon('chart'), h('span.lbl', 'Análise'), h('span.caret', '▾'));
-        const mic = T.iconBtn('voice', dictOn ? 'Parar o ditado' : 'Ditar: fale e o texto aparece onde está o cursor (diga “vírgula”, “ponto”, “nova linha”, “travessão”…)', () => toggleDictation(), dictOn ? '.dict-on' : '');
-        const fnd = T.iconBtn('search', 'Localizar e substituir neste texto (Ctrl+F)', () => findBar(), '.find-btn');
-        const bmk = h('button.btn.sm.bm-btn', { type: 'button', title: 'Onde parei: volta direto ao ponto em que você escreveu por último (e marca-páginas seus)', onclick: (e) => bookmarkMenu(e.currentTarget) }, icon('bookmark'), h('span.lbl', 'Onde parei'));
-        const pvb = T.iconBtn('grid', 'Ver todas as páginas lado a lado (toque numa para ir até ela)', () => pagesOverview(), '.pv-btn');
-        const ubtn = (ic, t, c) => h('button.btn.sm.icon-only', { type: 'button', title: t, 'aria-label': t, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: () => cmd(c) }, icon(ic));
-        const undoGrp = h('div.ed-undo', { role: 'group', 'aria-label': 'Desfazer e refazer' }, ubtn('undo', 'Desfazer (Ctrl+Z)', 'undo'), ubtn('redo', 'Refazer (Ctrl+Y ou Ctrl+Shift+Z)', 'redo'),
-          h('button.btn.sm.icon-only', { type: 'button', title: 'Selecionar todo o texto (Ctrl+A)', 'aria-label': 'Selecionar todo o texto', onmousedown: (e) => e.preventDefault(), onclick: () => selectAllText() }, icon('selall')));
-        tools.append(undoGrp, seg(), special, bmk, mic, fnd, pvb, stBtn, anBtn, zoomCtl,
-          T.iconBtn('type', 'Texto, cores e zoom: tamanho, fonte, fundo, cor das letras', (e) => T.typePanel(e.currentTarget, mode, { bg: (a) => bgPicker(a), bgName: () => { const c = bgCfgOf(mode); return !c ? 'Nenhum' : c.bg.kind === 'scene' ? T.Scenes.get(c.bg.id).name : (c.bg.name || 'Meu fundo'); }, align: alignPara, bookCfg: () => bookCfg(S().get(item.pid)), setBook: (patch) => setBookCfg(patch) })),
-          menuBtn('bold', 'Formatar', 'Negrito, itálico, sublinhado, quebra de cena, desfazer', () => [
-            { label: 'Negrito (Ctrl+B)', icon: 'bold', fn: () => cmd('bold') },
-            { label: 'Itálico (Ctrl+I)', icon: 'italic', fn: () => cmd('italic') },
-            { label: 'Sublinhado (Ctrl+U)', icon: 'underline', fn: () => cmd('underline') },
-            { label: 'Quebra de cena (⁂)', icon: 'orn', fn: () => insertBreak() },
-            { label: (S().prefs().autoDash !== false ? '✓ ' : '') + 'Trocar - por travessão (—) enquanto escrevo', icon: 'edit', fn: () => { S().setPrefs({ autoDash: S().prefs().autoDash === false }); T.toast(S().prefs().autoDash !== false ? 'Travessão automático ligado.' : 'Travessão automático desligado.'); } },
-            '-',
-            { label: 'Selecionar todo o texto (Ctrl+A)', icon: 'selall', fn: () => selectAllText() },
-            { label: 'Desfazer (Ctrl+Z)', icon: 'undo', fn: () => cmd('undo') },
-            { label: 'Refazer (Ctrl+Shift+Z)', icon: 'redo', fn: () => cmd('redo') },
-          ]));
-        { const kit = T.typeKit(mode, false); const on = kit && kit !== 'off';
-          tools.append(T.iconBtn(on ? 'sound' : 'mute', on ? 'Som da digitação: ' + T.Sound.KITS[kit] + ' (clique para trocar)' : 'Ligar som da digitação', (e) => T.soundPanel(e.currentTarget, mode, () => buildTools()), on ? '.on' : '')); }
-        if (mode === 'tw') {
-          const lightOn = view('tw').light !== false;
-          tools.append(h('span.sep'),
-            T.iconBtn('sun', lightOn ? 'Desligar a luz projetada' : 'Ligar a luz projetada', () => { setView('tw', { light: !lightOn }); T.toast(lightOn ? 'Luz projetada desligada.' : 'Luz projetada ligada.'); }, lightOn ? '.on' : ''));
-        }
-        if (mode === 'book') {
-          const single = !!view('book').single;
-          const pv = h('div.seg', { role: 'group', 'aria-label': 'Páginas visíveis' },
-            h('button' + (single ? '.on' : ''), { type: 'button', title: 'Uma página por vez', onclick: () => { if (!single) { const col = geo ? (OR() ? spread * 2 - (spread > 0 ? 1 : 0) : spread * 2) : 0; setView('book', { single: true }); go(Math.max(0, col), false); } } }, '1 pág.'),
-            h('button' + (!single ? '.on' : ''), { type: 'button', title: 'Duas páginas lado a lado', onclick: () => { if (single) { const sp = OR() ? Math.floor((spread + 1) / 2) : Math.floor(spread / 2); setView('book', { single: false }); go(sp, false); } } }, '2 págs.'));
-          tools.append(h('span.sep'), pv, T.iconBtn('gear', 'Formato do livro', (e) => bookSettings(e.currentTarget)));
-        }
-        tools.append(h('span.sep'),
-          menuBtn('dots', 'Ferramentas', 'Voz, dividir cena, versões, comentários', () => [
-            { label: 'Fundo atrás da página (cenas, imagens, vídeos)…', icon: 'image', fn: () => bgPicker(tools.querySelector('.tool-menu:last-of-type') || tools) },
-            { label: reading ? 'Parar leitura em voz alta' : 'Ler em voz alta', icon: 'voice', fn: () => readAloud() },
-            { label: 'Vozes da narração…', icon: 'sound', fn: () => T.Narr.settings(item.pid, [...prose.querySelectorAll('section p')]) },
-            { label: T.Narr.hasRec(currentSectionItem()) ? 'Minha voz nesta cena ✓' : 'Minha voz nesta cena…', icon: 'voice', fn: () => T.Narr.recModal(currentSectionItem(), () => buildTools()) },
-            { label: 'Dividir a cena no cursor', icon: 'scissors', fn: () => splitScene() },
-            { label: 'Juntar esta cena com a próxima', icon: 'merge', fn: () => joinWithNext() },
-            { label: 'Salvar uma versão', icon: 'camera', fn: () => snapshot() },
-            { label: 'Ver versões salvas…', icon: 'history', fn: () => { save.flush(); T.Versions.browse(currentSectionItem(), () => rerender()); } },
-            '-',
-            { label: 'Comentar o trecho selecionado (Ctrl+Alt+M)', icon: 'comment', fn: () => { restoreSel(); addComment(); } },
-            { label: (S().prefs().cmtRail !== false ? '✓ ' : '') + 'Mostrar comentários na lateral', icon: 'comment', fn: () => { S().setPrefs({ cmtRail: S().prefs().cmtRail === false }); updateRail(); } },
-            { label: 'Todos os comentários (abertos e resolvidos)…', icon: 'check', fn: () => T.Comments.panel(item.pid, { here: railCtx }) },
-          ]),
-          T.iconBtn('info', 'Ficha da cena, comentários e versões', () => toggleInspector(), inspectorOpen ? '.on' : ''),
-        );
+        const ficha = h('button.btn.sm.ficha-btn' + (inspectorOpen ? '.on' : ''), { type: 'button', title: 'Ficha do capítulo: resumo, ponto de vista, status e comentários', onclick: () => toggleInspector() }, icon('info'), h('span.lbl', 'Ficha'));
+        // avisos de algo ligado agora (para desligar com um clique)
+        const live = [
+          dictOn ? h('button.btn.sm.live-chip', { type: 'button', title: 'Parar o ditado', onclick: () => toggleDictation() }, h('span.dot'), 'Ditando · parar') : null,
+          reading ? h('button.btn.sm.live-chip', { type: 'button', title: 'Parar a leitura em voz alta', onclick: () => readAloud() }, h('span.dot'), 'Lendo · parar') : null,
+        ];
+        const sep = () => h('span.tsep');
+        tools.append(undoGrp, sep(), stBtn, fmtBtn, sep(), verBtn, revBtn, toolBtn, ...live, sep(), zoomCtl, ficha);
       }
       // guarda a seleção do texto ao abrir um menu, para os comandos agirem sobre ela
       let savedRange = null;
