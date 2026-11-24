@@ -1987,3 +1987,13 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .ed-undo{ display:inline-flex; gap: 2px; }
 .ed-undo .btn.icon-only{ padding: 6px 8px; min-width: 0; }
 .ed-undo .btn.icon-only svg{ width: 17px; height: 17px; }
+
+/* parte presa no alto da barra lateral enquanto rola pelos capítulos dela */
+.tree-grp{ position: relative; }
+.tree-row.sticky{ position: sticky; top: -4px; z-index: 3; background: var(--glass-strong); -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3); box-shadow: 0 6px 10px -8px hsl(230 30% 20% / .35); font-weight: 600; }
+.tree-row.sticky:hover{ background: var(--glass-strong); }
+.tree-row.sticky.active{ background: var(--accent-soft); }
+.tree-row.sticky .row-acts{ display:inline-flex; }
+.tree-row.sticky .row-acts .ra:last-child{ display:none; }
+.tree-row.sticky:hover .row-acts .ra:last-child, .tree-row.sticky:focus-within .row-acts .ra:last-child{ display:grid; }
+.tree-row.sticky .row-acts .ra:first-child{ color: var(--accent-ink); background: var(--accent-soft); }

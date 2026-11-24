@@ -623,6 +623,12 @@
         const zone = row.classList.contains('drop-inside') ? 'in' : row.classList.contains('drop-before') ? 'before' : 'after';
         moveItem(dragId, it, zone); dragId = null;
       };
+      // parte aberta: o nome dela (com o + para novo capítulo) fica preso no alto enquanto você desce pelos capítulos
+      if (it.type === 'part' && kids.length && open) {
+        row.classList.add('sticky');
+        wrap.appendChild(h('div.tree-grp', row, tree(pid, it.id, null, filter)));
+        return;
+      }
       wrap.appendChild(row);
       if (kids.length && open) wrap.appendChild(tree(pid, it.id, null, filter));
     });
