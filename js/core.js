@@ -142,6 +142,7 @@ window.T.STANDALONE = !(window.claude && typeof window.claude.use === 'function'
     flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3-1-3 0-6 1-9z',
     undo: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
     redo: 'M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13',
+    selall: 'M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 9h8M8 12h8M8 15h5',
     underline: 'M7 4v7a5 5 0 0 0 10 0V4M5 20h14',
     wall: 'M3 5h18v14H3zM3 15l5-4 4 3 3-2 6 4M15.5 8.5a1 1 0 1 0 0 .01',
     person: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 20a8 8 0 0 1 16 0',

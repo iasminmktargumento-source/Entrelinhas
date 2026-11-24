@@ -310,7 +310,8 @@
         const bmk = h('button.btn.sm.bm-btn', { type: 'button', title: 'Onde parei: volta direto ao ponto em que você escreveu por último (e marca-páginas seus)', onclick: (e) => bookmarkMenu(e.currentTarget) }, icon('bookmark'), h('span.lbl', 'Onde parei'));
         const pvb = T.iconBtn('grid', 'Ver todas as páginas lado a lado (toque numa para ir até ela)', () => pagesOverview(), '.pv-btn');
         const ubtn = (ic, t, c) => h('button.btn.sm.icon-only', { type: 'button', title: t, 'aria-label': t, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: () => cmd(c) }, icon(ic));
-        const undoGrp = h('div.ed-undo', { role: 'group', 'aria-label': 'Desfazer e refazer' }, ubtn('undo', 'Desfazer (Ctrl+Z)', 'undo'), ubtn('redo', 'Refazer (Ctrl+Y ou Ctrl+Shift+Z)', 'redo'));
+        const undoGrp = h('div.ed-undo', { role: 'group', 'aria-label': 'Desfazer e refazer' }, ubtn('undo', 'Desfazer (Ctrl+Z)', 'undo'), ubtn('redo', 'Refazer (Ctrl+Y ou Ctrl+Shift+Z)', 'redo'),
+          h('button.btn.sm.icon-only', { type: 'button', title: 'Selecionar todo o texto (Ctrl+A)', 'aria-label': 'Selecionar todo o texto', onmousedown: (e) => e.preventDefault(), onclick: () => selectAllText() }, icon('selall')));
         tools.append(undoGrp, seg(), special, bmk, mic, fnd, pvb, stBtn, anBtn, zoomCtl,
           T.iconBtn('type', 'Texto, cores e zoom: tamanho, fonte, fundo, cor das letras', (e) => T.typePanel(e.currentTarget, mode, { bg: (a) => bgPicker(a), bgName: () => { const c = bgCfgOf(mode); return !c ? 'Nenhum' : c.bg.kind === 'scene' ? T.Scenes.get(c.bg.id).name : (c.bg.name || 'Meu fundo'); }, align: alignPara, bookCfg: () => bookCfg(S().get(item.pid)), setBook: (patch) => setBookCfg(patch) })),
           menuBtn('bold', 'Formatar', 'Negrito, itálico, sublinhado, quebra de cena, desfazer', () => [
@@ -320,6 +321,7 @@
             { label: 'Quebra de cena (⁂)', icon: 'orn', fn: () => insertBreak() },
             { label: (S().prefs().autoDash !== false ? '✓ ' : '') + 'Trocar - por travessão (—) enquanto escrevo', icon: 'edit', fn: () => { S().setPrefs({ autoDash: S().prefs().autoDash === false }); T.toast(S().prefs().autoDash !== false ? 'Travessão automático ligado.' : 'Travessão automático desligado.'); } },
             '-',
+            { label: 'Selecionar todo o texto (Ctrl+A)', icon: 'selall', fn: () => selectAllText() },
             { label: 'Desfazer (Ctrl+Z)', icon: 'undo', fn: () => cmd('undo') },
             { label: 'Refazer (Ctrl+Shift+Z)', icon: 'redo', fn: () => cmd('redo') },
           ]));
@@ -357,6 +359,15 @@
       }
       // guarda a seleção do texto ao abrir um menu, para os comandos agirem sobre ela
       let savedRange = null;
+      // seleciona só o texto do capítulo (sem o título fixo nem o resto da tela)
+      function selectAllText(){
+        const secs = prose.querySelectorAll('section'); const a = secs[0], z = secs[secs.length - 1];
+        prose.focus({ preventScroll: true });
+        const r = document.createRange();
+        if (a) { r.setStart(a, 0); r.setEnd(z, z.childNodes.length); } else r.selectNodeContents(prose);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        T.toast('Todo o texto selecionado. Ctrl+C copia; Formatar aplica em tudo.');
+      }
       function keepSel(){ const sel = getSelection(); savedRange = sel.rangeCount && prose.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null; }
       function restoreSel(){ if (savedRange) { prose.focus({ preventScroll: true }); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(savedRange); savedRange = null; } else prose.focus({ preventScroll: true }); }
       function cmd(c){ restoreSel(); document.execCommand(c); normalize(); save(); }
