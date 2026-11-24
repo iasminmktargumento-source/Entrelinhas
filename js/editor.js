@@ -148,6 +148,7 @@
     cinzel: ['Cinzel (títulos)', '"Cinzel", serif', 'Especiais'],
   };
   T.FONTS = FONTS;
+  T.FONT_SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 18.5, 19, 20, 21, 22, 23, 24, 26, 28, 30, 32, 36, 40, 44, 48];
   const fontLoaded = new Set();
   T.loadFont = (k) => {
     const f = FONTS[k]; if (!f || !f[3] || fontLoaded.has(k)) return; fontLoaded.add(k);
@@ -401,10 +402,10 @@
         });
         fontBtn.classList.add('font-btn'); fontBtn.style.fontFamily = isBook ? (BOOK_FACES[bc.face] || BOOK_FACES.literata).css : (FONTS[curFontKey] || FONTS.write)[1];
         const szVal = isBook ? bc.pt : vv.size;
-        const szSet = (d) => { if (isBook) { setBookCfg({ pt: Math.max(9, Math.min(15, +(bc.pt + d * .5).toFixed(1))) }); buildTools(); } else setView(mode, { size: Math.max(11, Math.min(40, +(vv.size + d).toFixed(1))) }); };
+        const szSet = (d) => { if (isBook) { setBookCfg({ pt: Math.max(8, Math.min(18, +(bc.pt + d * .5).toFixed(1))) }); buildTools(); } else setView(mode, { size: Math.max(10, Math.min(60, +(vv.size + d).toFixed(1))) }); };
         const sizeCtl = h('div.size-ctl', { role: 'group', 'aria-label': 'Tamanho da letra', title: isBook ? 'Tamanho da letra do livro (pt)' : 'Tamanho da letra (vale para todo o texto neste modo)' },
           h('button', { type: 'button', 'aria-label': 'Diminuir a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(-1) }, '−'),
-          h('button.sv', { type: 'button', title: 'Escolher o tamanho', onmousedown: (e) => e.preventDefault(), onclick: (e) => T.menuAt(e.currentTarget, [{ head: isBook ? 'Tamanho (pt)' : 'Tamanho da letra' }, ...(isBook ? [9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 14, 15] : [12, 14, 15, 16, 17, 18, 18.5, 19, 20, 22, 24, 28, 32, 36]).map(n => ({ label: String(n).replace('.', ','), on: n === szVal, fn: () => { if (isBook) { setBookCfg({ pt: n }); buildTools(); } else setView(mode, { size: n }); } }))]) }, String(szVal).replace('.', ',')),
+          h('button.sv', { type: 'button', title: 'Escolher o tamanho', onmousedown: (e) => e.preventDefault(), onclick: (e) => T.menuAt(e.currentTarget, [{ head: isBook ? 'Tamanho (pt)' : 'Tamanho da letra' }, ...(isBook ? [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 16, 18] : T.FONT_SIZES).map(n => ({ label: String(n).replace('.', ','), on: n === szVal, fn: () => { if (isBook) { setBookCfg({ pt: n }); buildTools(); } else setView(mode, { size: n }); } })), '-', { label: 'Outro tamanho…', icon: 'edit', fn: async () => { const v = await T.ask('Tamanho da letra', { value: String(szVal), text: isBook ? 'De 8 a 18 pt. Pode usar vírgula, ex.: 11,5.' : 'De 10 a 60 px. Pode usar vírgula, ex.: 18,5.' }); const n = parseFloat(String(v || '').replace(',', '.')); if (!n) return; if (isBook) { if (n >= 8 && n <= 18) { setBookCfg({ pt: n }); buildTools(); } else T.toast('No modo Livro, use de 8 a 18 pt.'); } else if (n >= 10 && n <= 60) setView(mode, { size: n }); else T.toast('Use um tamanho de 10 a 60.'); } }]) }, String(szVal).replace('.', ',')),
           h('button', { type: 'button', 'aria-label': 'Aumentar a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(1) }, '+'));
         // 3. como ver a página
         const verBtn = menuBtn('eye', 'Ver: ' + modeName, 'Jeito de escrever (normal, máquina, livro), foco, zoom, letras, cores e fundo', () => {
@@ -517,7 +518,8 @@
         T.modal((box, close) => {
           const seg = (key, opts) => { const el = h('div.seg.bf-seg'); const draw = () => { el.innerHTML = ''; opts.forEach(([k, l]) => el.appendChild(h('button' + (st[key] === k ? '.on' : ''), { type: 'button', onclick: () => { st[key] = k; draw(); } }, l))); }; draw(); return el; };
           const fontSel = T.fontSelect('', (k) => { st.font = k; }, { keep: 'Não mudar (' + (FONTS[v0.font]?.[0] || 'Literata') + ')' });
-          const sizeSel = h('select.select', { onchange: (e) => { st.size = e.target.value; } }, h('option', { value: 'keep' }, 'Não mudar (' + (v0.size || '') + ' px)'), ...[15, 16, 17, 18, 19, 20, 22, 24].map(n => h('option', { value: String(n) }, n + ' px')));
+          const sizeSel = h('select.select', { onchange: async (e) => { if (e.target.value === 'other') { const v = await T.ask('Tamanho da letra', { value: String(v0.size || 18), text: 'Qualquer número de 10 a 60 (em px). Pode usar vírgula, ex.: 18,5.' }); const n = parseFloat(String(v || '').replace(',', '.')); if (n >= 10 && n <= 60) { const o = h('option', { value: String(n) }, String(n).replace('.', ',') + ' px'); e.target.insertBefore(o, e.target.lastChild); e.target.value = String(n); st.size = String(n); } else { e.target.value = st.size; } return; } st.size = e.target.value; } },
+            h('option', { value: 'keep' }, 'Não mudar (' + String(v0.size || '').replace('.', ',') + ' px)'), ...T.FONT_SIZES.map(n => h('option', { value: String(n) }, String(n).replace('.', ',') + ' px')), h('option', { value: 'other' }, 'Outro tamanho…'));
           const chk = (key, label) => h('label.mp-chk', h('input', { type: 'checkbox', onchange: (e) => { st[key] = e.target.checked; } }), label);
           const nCh = T.MS.flat(pid).filter(i => i.type === 'chapter').length;
           box.append(
