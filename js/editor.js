@@ -90,7 +90,10 @@
   T.TRIMS = TRIMS;
   const bookCfg = (proj) => Object.assign({ trim: '14x21', pt: 11, lead: 1.42, dropcap: true, sink: 30, face: 'literata' }, proj?.meta?.book || {});
   // letras do modo Livro: Literata foi desenhada para ler na tela (mais nítida); Garamond é a clássica de livro impresso
-  const BOOK_FACES = { literata: { name: 'Literata (nítida)', css: '"Literata", Georgia, serif', w: 400 }, garamond: { name: 'Garamond', css: '"EB Garamond", Garamond, serif', w: 500 }, georgia: { name: 'Georgia', css: 'Georgia, "Times New Roman", serif', w: 400 } };
+  const BOOK_FACES = { literata: { name: 'Literata (nítida)', css: '"Literata", Georgia, serif', w: 400 }, garamond: { name: 'Garamond', css: '"EB Garamond", Garamond, serif', w: 500 }, georgia: { name: 'Georgia', css: 'Georgia, Gelasio, "Times New Roman", serif', w: 400, f: 'georgia' },
+    times: { name: 'Times New Roman', css: '"Times New Roman", Tinos, Times, serif', w: 400, f: 'times' }, baskerville: { name: 'Libre Baskerville', css: '"Libre Baskerville", Baskerville, serif', w: 400, f: 'baskerville' },
+    crimson: { name: 'Crimson Pro', css: '"Crimson Pro", Georgia, serif', w: 400, f: 'crimson' }, lora: { name: 'Lora', css: '"Lora", Georgia, serif', w: 400, f: 'lora' }, cormorant: { name: 'Cormorant Garamond', css: '"Cormorant Garamond", Garamond, serif', w: 500, f: 'cormorant' },
+    palatino: { name: 'Palatino', css: '"Palatino Linotype", Palatino, "Book Antiqua", Domine, serif', w: 400, f: 'palatino' }, ptserif: { name: 'PT Serif', css: '"PT Serif", Georgia, serif', w: 400, f: 'ptserif' }, sourceserif: { name: 'Source Serif', css: '"Source Serif 4", Georgia, serif', w: 400, f: 'sourceserif' } };
 
   /* ---------- aparência do texto (zoom, fonte, tamanho) por modo ---------- */
   const PAPERS = [['', 'Padrão'], ['branco', 'Branco'], ['sepia', 'Sépia'], ['preto', 'Preto']];
@@ -102,14 +105,72 @@
     book: { zoom: 100 },
     compose: { zoom: 100, size: 19, font: 'write', lead: 1.75, justify: false, marks: true },
   };
-  const FONTS = { write: ['Literata', 'var(--font-write)'], book: ['EB Garamond', 'var(--font-book)'], ui: ['Instrument Sans', 'var(--font-ui)'], display: ['Instrument Serif', 'var(--font-display)'], type: ['Special Elite', 'var(--font-type)'], courier: ['Courier Prime', '"Courier Prime", "Courier New", monospace'] };
+  // fontes: [nome, css, grupo, família no Google Fonts (carrega só quando você escolhe)]
+  const VAR = (f) => f + ':ital,wght@0,400..700;1,400..700';
+  const FOUR = (f) => f + ':ital,wght@0,400;0,700;1,400;1,700';
+  const FONTS = {
+    times: ['Times New Roman', '"Times New Roman", Tinos, Times, serif', 'Clássicas (Word e Google Docs)', FOUR('Tinos')],
+    arial: ['Arial', 'Arial, Arimo, Helvetica, sans-serif', 'Clássicas (Word e Google Docs)', FOUR('Arimo')],
+    georgia: ['Georgia', 'Georgia, Gelasio, serif', 'Clássicas (Word e Google Docs)', VAR('Gelasio')],
+    book: ['Garamond', 'var(--font-book)', 'Clássicas (Word e Google Docs)'],
+    calibri: ['Calibri', 'Calibri, Carlito, sans-serif', 'Clássicas (Word e Google Docs)', FOUR('Carlito')],
+    cambria: ['Cambria', 'Cambria, Caladea, serif', 'Clássicas (Word e Google Docs)', FOUR('Caladea')],
+    verdana: ['Verdana', 'Verdana, "DejaVu Sans", Geneva, sans-serif', 'Clássicas (Word e Google Docs)'],
+    tahoma: ['Tahoma', 'Tahoma, Verdana, sans-serif', 'Clássicas (Word e Google Docs)'],
+    trebuchet: ['Trebuchet MS', '"Trebuchet MS", "Lucida Grande", sans-serif', 'Clássicas (Word e Google Docs)'],
+    palatino: ['Palatino', '"Palatino Linotype", Palatino, "Book Antiqua", "Domine", serif', 'Clássicas (Word e Google Docs)', 'Domine:wght@400..700'],
+    couriernew: ['Courier New', '"Courier New", Cousine, monospace', 'Clássicas (Word e Google Docs)', FOUR('Cousine')],
+    comic: ['Comic Sans', '"Comic Sans MS", "Comic Neue", cursive', 'Clássicas (Word e Google Docs)', 'Comic+Neue:ital,wght@0,400;0,700;1,400'],
+    write: ['Literata', 'var(--font-write)', 'Serifadas para livro'],
+    lora: ['Lora', '"Lora", Georgia, serif', 'Serifadas para livro', VAR('Lora')],
+    merriweather: ['Merriweather', '"Merriweather", Georgia, serif', 'Serifadas para livro', FOUR('Merriweather')],
+    crimson: ['Crimson Pro', '"Crimson Pro", Georgia, serif', 'Serifadas para livro', VAR('Crimson+Pro')],
+    baskerville: ['Libre Baskerville', '"Libre Baskerville", Baskerville, serif', 'Serifadas para livro', 'Libre+Baskerville:ital,wght@0,400;0,700;1,400'],
+    cormorant: ['Cormorant Garamond', '"Cormorant Garamond", Garamond, serif', 'Serifadas para livro', VAR('Cormorant+Garamond')],
+    playfair: ['Playfair Display', '"Playfair Display", Georgia, serif', 'Serifadas para livro', VAR('Playfair+Display')],
+    ptserif: ['PT Serif', '"PT Serif", Georgia, serif', 'Serifadas para livro', FOUR('PT+Serif')],
+    sourceserif: ['Source Serif', '"Source Serif 4", Georgia, serif', 'Serifadas para livro', VAR('Source+Serif+4')],
+    spectral: ['Spectral', '"Spectral", Georgia, serif', 'Serifadas para livro', FOUR('Spectral')],
+    alegreya: ['Alegreya', '"Alegreya", Georgia, serif', 'Serifadas para livro', VAR('Alegreya')],
+    display: ['Instrument Serif', 'var(--font-display)', 'Serifadas para livro'],
+    fell: ['IM Fell (antiga)', '"IM Fell English", Georgia, serif', 'Serifadas para livro'],
+    ui: ['Instrument Sans', 'var(--font-ui)', 'Sem serifa'],
+    roboto: ['Roboto', '"Roboto", Arial, sans-serif', 'Sem serifa', VAR('Roboto')],
+    opensans: ['Open Sans', '"Open Sans", Arial, sans-serif', 'Sem serifa', VAR('Open+Sans')],
+    lato: ['Lato', '"Lato", Arial, sans-serif', 'Sem serifa', FOUR('Lato')],
+    montserrat: ['Montserrat', '"Montserrat", Arial, sans-serif', 'Sem serifa', VAR('Montserrat')],
+    nunito: ['Nunito', '"Nunito", Arial, sans-serif', 'Sem serifa', VAR('Nunito')],
+    poppins: ['Poppins', '"Poppins", Arial, sans-serif', 'Sem serifa', FOUR('Poppins')],
+    raleway: ['Raleway', '"Raleway", Arial, sans-serif', 'Sem serifa', VAR('Raleway')],
+    sourcesans: ['Source Sans', '"Source Sans 3", Arial, sans-serif', 'Sem serifa', VAR('Source+Sans+3')],
+    type: ['Special Elite', 'var(--font-type)', 'Máquina de escrever'],
+    courier: ['Courier Prime', '"Courier Prime", "Courier New", monospace', 'Máquina de escrever'],
+    cinzel: ['Cinzel (títulos)', '"Cinzel", serif', 'Especiais'],
+  };
+  T.FONTS = FONTS;
+  const fontLoaded = new Set();
+  T.loadFont = (k) => {
+    const f = FONTS[k]; if (!f || !f[3] || fontLoaded.has(k)) return; fontLoaded.add(k);
+    document.head.appendChild(h('link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=' + f[3] + '&display=swap' }));
+  };
+  // lista de fontes agrupada, cada nome escrito na própria letra
+  T.fontSelect = (cur, onChange, opts = {}) => {
+    const groups = {}; Object.entries(FONTS).forEach(([k, f]) => { (groups[f[2]] = groups[f[2]] || []).push([k, f]); });
+    const sel = h('select.select.font-sel', { 'aria-label': 'Fonte' },
+      opts.keep ? h('option', { value: 'keep' }, opts.keep) : null,
+      ...Object.entries(groups).map(([g, list]) => h('optgroup', { label: g }, list.map(([k, f]) => h('option', { value: k, selected: k === cur, style: { fontFamily: f[1] } }, f[0])))));
+    const paint = () => { const f = FONTS[sel.value]; sel.style.fontFamily = f ? f[1] : ''; if (f) T.loadFont(sel.value); };
+    sel.onchange = () => { paint(); onChange && onChange(sel.value); };
+    if (cur) { T.loadFont(cur); setTimeout(paint, 0); }
+    return sel;
+  };
   T.FONTS = FONTS;
   const view = (m) => Object.assign({}, VIEW_DEF[m], (S().prefs().view || {})[m]);
   const setView = (m, patch) => { const all = Object.assign({}, S().prefs().view); all[m] = Object.assign({}, view(m), patch); S().setPrefs({ view: all }); T.emit('view-changed', m); };
   T.EditorView = { get: view, set: setView };
   // aplica fonte/tamanho/entrelinha a um elemento de texto
   T.applyTextView = (el, v) => {
-    el.style.fontFamily = (FONTS[v.font] || FONTS.write)[1];
+    T.loadFont(v.font); el.style.fontFamily = (FONTS[v.font] || FONTS.write)[1];
     el.style.fontSize = v.size + 'px';
     el.style.lineHeight = String(v.lead);
     el.style.textAlign = v.justify ? 'justify' : '';
@@ -121,8 +182,7 @@
     const stepper = (label, val, fmt, dec, inc) => h('div.tp-row', h('span.tp-l', label), h('div.tp-step', h('button.icon-btn.sm', { type: 'button', title: 'Diminuir', onclick: dec }, '−'), h('b.num', fmt(val)), h('button.icon-btn.sm', { type: 'button', title: 'Aumentar', onclick: inc }, '+')));
     const re = () => { pop.remove(); T.typePanel(anchor, m, opts); };
     const set = (patch) => { setView(m, patch); re(); };
-    const fontSel = h('select.select', { 'aria-label': 'Fonte' }, Object.entries(FONTS).map(([k, f]) => h('option', { value: k, selected: v.font === k }, f[0])));
-    fontSel.onchange = () => set({ font: fontSel.value });
+    const fontSel = T.fontSelect(v.font || 'write', (k) => set({ font: k }));
     const segOf = (vals, cur, fn) => h('div.seg', vals.map(([k, l, t]) => { const b = h('button', { type: 'button', title: t || l, onclick: () => fn(k) }, l); if (k === cur) b.classList.add('on'); return b; }));
     const rows = [
       stepper('Zoom', v.zoom, x => x + '%', () => set({ zoom: Math.max(50, v.zoom - 10) }), () => set({ zoom: Math.min(220, v.zoom + 10) })),
@@ -429,7 +489,7 @@
         const st = { font: 'keep', size: 'keep', align: 'keep', centered: false, first: 'keep', clearIn: false };
         T.modal((box, close) => {
           const seg = (key, opts) => { const el = h('div.seg.bf-seg'); const draw = () => { el.innerHTML = ''; opts.forEach(([k, l]) => el.appendChild(h('button' + (st[key] === k ? '.on' : ''), { type: 'button', onclick: () => { st[key] = k; draw(); } }, l))); }; draw(); return el; };
-          const fontSel = h('select.select', { onchange: (e) => { st.font = e.target.value; } }, h('option', { value: 'keep' }, 'Não mudar (' + (FONTS[v0.font]?.[0] || 'Literata') + ')'), ...Object.entries(FONTS).map(([k, f]) => h('option', { value: k }, f[0])));
+          const fontSel = T.fontSelect('', (k) => { st.font = k; }, { keep: 'Não mudar (' + (FONTS[v0.font]?.[0] || 'Literata') + ')' });
           const sizeSel = h('select.select', { onchange: (e) => { st.size = e.target.value; } }, h('option', { value: 'keep' }, 'Não mudar (' + (v0.size || '') + ' px)'), ...[15, 16, 17, 18, 19, 20, 22, 24].map(n => h('option', { value: String(n) }, n + ' px')));
           const chk = (key, label) => h('label.mp-chk', h('input', { type: 'checkbox', onchange: (e) => { st[key] = e.target.checked; } }), label);
           const nCh = T.MS.flat(pid).filter(i => i.type === 'chapter').length;
@@ -924,7 +984,7 @@
         const R = Math.round; const PW = R(tr.w * s), PH = R(tr.h * s), mt = R(tr.mt * s), mb = R(tr.mb * s), mi = R(tr.mi * s), mo = R(tr.mo * s);
         const TW = PW - mi - mo, TH = PH - mt - mb, G = 2 * mi;
         const fs = Math.round(cfg.pt * 0.03528 * s * 4) / 4;
-        const face = BOOK_FACES[cfg.face] || BOOK_FACES.literata; prose.style.setProperty('--font-book', face.css); prose.style.fontWeight = face.w; bookEls.deco.style.setProperty('--font-book', face.css);
+        const face = BOOK_FACES[cfg.face] || BOOK_FACES.literata; if (face.f) T.loadFont(face.f); prose.style.setProperty('--font-book', face.css); prose.style.fontWeight = face.w; bookEls.deco.style.setProperty('--font-book', face.css);
         geo = { s, PW, PH, mt, mb, mi, mo, TW, TH, G, fs, single };
         spreadEl.style.width = (single ? 1 : 2) * PW + 'px'; spreadEl.style.height = PH + 'px';
         spreadEl.classList.toggle('single', single);
@@ -1083,7 +1143,7 @@
             h('b.bs-h', 'Formato do livro'),
             row('Tamanho', seg(Object.entries(TRIMS).map(([k, v]) => [cfg.trim === k, v.name, () => setB({ trim: k })]))),
             row('Corpo do texto', seg([10.5, 11, 11.5, 12].map(pt => [cfg.pt === pt, String(pt).replace('.', ',') + ' pt', () => setB({ pt })]))),
-            row('Letra', seg(Object.entries(BOOK_FACES).map(([k, f]) => [cfg.face === k, f.name, () => setB({ face: k })]))),
+            row('Letra', (() => { const sl = h('select.select.font-sel', { 'aria-label': 'Letra do livro', onchange: (e) => setB({ face: e.target.value }) }, Object.entries(BOOK_FACES).map(([k, f]) => h('option', { value: k, selected: (cfg.face || 'literata') === k, style: { fontFamily: f.css } }, f.name))); sl.style.fontFamily = (BOOK_FACES[cfg.face] || BOOK_FACES.literata).css; Object.values(BOOK_FACES).forEach(f => f.f && T.loadFont(f.f)); return sl; })()),
             row('Entrelinha', seg([[1.3, 'Justa'], [1.42, 'Normal'], [1.55, 'Aberta']].map(([l, n]) => [cfg.lead === l, n, () => setB({ lead: l })]))),
             h('label.mp-chk', h('input', { type: 'checkbox', checked: !!cfg.dropcap, onchange: () => setB({ dropcap: !cfg.dropcap }) }), 'Letra capitular na abertura do capítulo'),
             h('label.mp-chk', h('input', { type: 'checkbox', checked: !!cfg.openRight, onchange: () => { setB({ openRight: !cfg.openRight }); go(0, false); } }), 'Capítulo começa sozinho na página da direita (como no livro impresso)'),
