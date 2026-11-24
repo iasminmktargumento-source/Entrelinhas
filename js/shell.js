@@ -187,7 +187,7 @@
     const p = S().create({ type: 'project', title, meta: { sample: !!sample, description, hue, author, cover, targets: { book: 90000, session: 1000, deadline: '', days: [1, 2, 3, 4, 5] } } });
     const pid = p.id; let o = 1000;
     const mk = (type, title, parent, meta = {}, body = '') => S().create({ pid, type, area: 'ms', parent, title, order: (o += 1000), meta: Object.assign({ status: 'rascunho' }, meta), body });
-    const chapterWithScene = (part, title, syn) => { const c = mk('chapter', title, part, { synopsis: syn }); mk('scene', 'Cena 1', c.id); return c; };
+    const chapterWithScene = (part, title, syn) => { const c = mk('chapter', title, part, { synopsis: syn }); mk('scene', 'Texto', c.id); return c; };
     if (template === 'tres-atos') {
       const acts = [['Ato I · Apresentação', [['O mundo comum', 'Quem é a protagonista antes de tudo mudar? O que ela quer e o que lhe falta?'], ['O incidente', 'O acontecimento que tira a vida do eixo e não deixa voltar atrás.']]],
         ['Ato II · Confronto', [['Novas regras', 'Ela entra num mundo ou situação desconhecida e tenta se adaptar.'], ['Ponto médio', 'Uma revelação ou virada muda o objetivo ou o jogo.'], ['Tudo dá errado', 'O plano falha; as perdas se acumulam até o ponto mais baixo.']]],
@@ -204,7 +204,7 @@
     } else if (template === 'multipov') {
       for (let i = 1; i <= 3; i++) { const c = mk('chapter', 'Capítulo ' + i, null); mk('scene', 'Cena · Narrador A', c.id, { pov: 'Narrador A' }); mk('scene', 'Cena · Narrador B', c.id, { pov: 'Narrador B' }); }
     } else {
-      const c = mk('chapter', 'Capítulo 1', null); mk('scene', 'Cena 1', c.id);
+      const c = mk('chapter', 'Capítulo 1', null); mk('scene', 'Texto', c.id);
     }
     const f = S().create({ pid, type: 'folder', area: 'res', parent: null, title: 'Pesquisa', order: 1000 });
     S().create({ pid, type: 'doc', area: 'res', parent: f.id, title: 'Notas do mundo', order: 2000, body: '' });
@@ -229,6 +229,7 @@
     const p = S().get(pid); if (!p) { Shell.home(); return; }
     S().update(pid, { meta: { opened: Date.now() } }, { delay: 3000, silent: true });
     setTimeout(() => T.emit('project-opened', { pid }), 1500);
+    S().all(pid).filter(i => i.type === 'chapter').forEach(ch => { const k = S().children(pid, ch.id); if (k.length === 1 && k[0].type === 'scene' && /^cena\s*\d*$/i.test(k[0].title || '')) S().update(k[0].id, { title: 'Texto' }, { silent: true }); });
     Shell.openState = Object.assign({}, p.meta?.openState || {});
     Shell.applyTheme();
     root.innerHTML = '';
@@ -265,6 +266,7 @@
     lay.panes.forEach(pn => (pn.tabs || []).forEach(t => { if (t.kind === 'soon' && upgrade[t.ref]) Object.assign(t, upgrade[t.ref]); }));
     // abas antigas de teia, árvore, calendário, timeline, metas… passam a abrir dentro das telas que juntam ferramentas
     if (T.Hubs) lay.panes.forEach(pn => (pn.tabs || []).forEach(t => { const r = T.Hubs.route(t); if (r) { const old = Object.assign({}, t); for (const k in t) if (k !== 'id') delete t[k]; Object.assign(t, { kind: 'hub', ref: r.ref, sub: r.sub, subs: { [r.sub]: Object.assign(old, { id: T.id() }) } }); } }));
+    lay.panes.forEach(pn => (pn.tabs || []).forEach(t => { if (t.kind === 'doc' && t.ref) t.ref = Shell.docRef(t.ref); }));
     lay.panes = lay.panes.slice(0, 4).map(pn => ({ tabs: (pn.tabs || []).filter(t => validTab(t)).map(t => Object.assign({}, t, { id: t.id || T.id() })), active: pn.active }));
     lay.n = T.clamp(lay.n || lay.panes.length, 1, 4);
     while (lay.panes.length < lay.n) lay.panes.push({ tabs: [], active: null });
@@ -665,7 +667,7 @@
     const names = { part: 'Nova parte', chapter: 'Capítulo ' + (T.MS.flat(Shell.pid).filter(i => i.type === 'chapter').length + 1), scene: 'Nova cena', folder: 'Nova pasta', doc: 'Novo documento' };
     const it = S().create({ pid: Shell.pid, type, area, parent, title: names[type], order: Date.now(), meta: type === 'scene' ? { status: 'rascunho' } : {} });
     if (parent) Shell.openState[parent] = true;
-    if (type === 'chapter') S().create({ pid: Shell.pid, type: 'scene', area, parent: it.id, title: 'Cena 1', order: Date.now() + 1, meta: { status: 'rascunho' } });
+    if (type === 'chapter') S().create({ pid: Shell.pid, type: 'scene', area, parent: it.id, title: 'Texto', order: Date.now() + 1, meta: { status: 'rascunho' } });
     T.emit('tree-changed');
     if (type !== 'folder' && type !== 'part') Shell.open({ kind: 'doc', ref: type === 'chapter' ? S().children(Shell.pid, it.id)[0].id : it.id });
     setTimeout(() => { const row = Shell.sideEl.querySelector('.tree-row[data-id="' + it.id + '"]'); if (row) rename(S().get(it.id), row); }, 60);
@@ -993,8 +995,15 @@
   }
 
   // Abrir algo numa aba: {kind, ref, find?, q?}
+  // o texto escondido de um capítulo abre como o próprio capítulo (sem "Cena 1")
+  Shell.docRef = function(ref){
+    const it = S().get(ref);
+    if (it && it.type === 'scene' && it.parent) { const ch = S().get(it.parent); if (ch && ch.type === 'chapter' && S().children(ch.pid, ch.id).filter(k => k.type === 'scene' || k.type === 'chapter' || k.type === 'doc').length === 1) return ch.id; }
+    return ref;
+  };
   Shell.open = function(spec, opts = {}){
     if (!Shell.layout) return;
+    if (spec && spec.kind === 'doc' && spec.ref) { const r = Shell.docRef(spec.ref); if (r !== spec.ref) spec = Object.assign({}, spec, { ref: r }); }
     if (opts.replace && opts.replace._hubSwap) { opts.replace._hubSwap(spec); return; }
     if (!opts.raw && T.Hubs) { const r = T.Hubs.route(spec); if (r) spec = r; }
     Shell.flushEditors();

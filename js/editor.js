@@ -1613,7 +1613,7 @@
         const comments = T.Comments.all(item.pid).filter(x => !x.c.resolved && (x.it.id === it.id || prose.querySelector('section[data-id="' + it.id + '"] span.cmt[data-c="' + x.cid + '"]'))).map(x => [x.cid, x.c]);
         const snaps = S().all(item.pid).filter(s => s.type === 'snapshot' && s.parent === it.id).sort((a, b) => b.created - a.created);
         insp = h('aside.inspector.glass.glass-strong',
-          h('div.row', h('h3.grow', 'Ficha da cena'), T.iconBtn('x', 'Fechar', () => toggleInspector(), '.sm')),
+          h('div.row', h('h3.grow', 'Ficha do capítulo'), T.iconBtn('x', 'Fechar', () => toggleInspector(), '.sm')),
           h('label.field', 'Título', title), h('label.field', 'Sinopse', syn),
           h('div.row', h('label.field.grow', 'Ponto de vista', pov), h('label.field.grow', 'Situação', st)), dl,
           h('label.field', h('span', 'Tensão da cena: ', tv, '/10'), tens),
