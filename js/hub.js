@@ -14,6 +14,7 @@
       { k: 'metas', label: 'Metas', icon: 'target', kind: 'overview', ref: 'overview' },
       { k: 'estatisticas', label: 'Estatísticas', icon: 'chart', kind: 'stats', ref: 'stats' },
       { k: 'tensao', label: 'Curva de tensão', icon: 'chart', kind: 'tension', ref: 'tension' },
+      { k: 'insignias', label: 'Insígnias', icon: 'trophy', kind: 'badges', ref: 'badges' },
     ] },
   };
   // qual hub abre cada tipo de tela

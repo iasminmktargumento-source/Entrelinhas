@@ -228,6 +228,7 @@
     if (Shell.pid !== pid) return;
     const p = S().get(pid); if (!p) { Shell.home(); return; }
     S().update(pid, { meta: { opened: Date.now() } }, { delay: 3000, silent: true });
+    setTimeout(() => T.emit('project-opened', { pid }), 1500);
     Shell.openState = Object.assign({}, p.meta?.openState || {});
     Shell.applyTheme();
     root.innerHTML = '';
@@ -410,6 +411,7 @@
       if (tl.open) tl.el.append(...[
         V('ideias', toolRow('idea', 'Ideias', () => Shell.open({ kind: 'ideas', ref: 'ideas' }), ideas ? h('span.chip.gray.num', String(ideas)) : null)),
         V('progresso', toolRow('target', 'Metas e progresso', () => Shell.open({ kind: 'hub', ref: 'progresso' }))),
+        V('insignias', toolRow('trophy', 'Insígnias', () => Shell.open({ kind: 'badges', ref: 'badges' }), (() => { const n = Object.keys(S().get(pid)?.meta?.badges || {}).length; return n ? h('span.chip.gray.num', String(n)) : null; })())),
         V('aquecimento', toolRow('flame', 'Aquecimento (exercícios)', () => Shell.open({ kind: 'warmup', ref: 'warmup' }))),
         V('nomes', toolRow('person', 'Gerador de nomes', () => Shell.open({ kind: 'names', ref: 'names' }))),
         V('tesauro', toolRow('feather', 'Tesauro da Escrita', () => Shell.open({ kind: 'tesauro', ref: 'tesauro' }))),
@@ -448,7 +450,7 @@
     draw();
   };
   const SIDE_ITEMS = [
-    ['Escrever', [['ideias', 'Ideias'], ['progresso', 'Metas e progresso (metas, estatísticas, curva de tensão)'], ['aquecimento', 'Aquecimento'], ['nomes', 'Gerador de nomes'], ['tesauro', 'Tesauro da Escrita'], ['radio', 'Rádio literária']]],
+    ['Escrever', [['ideias', 'Ideias'], ['progresso', 'Metas e progresso (metas, estatísticas, curva de tensão)'], ['insignias', 'Insígnias'], ['aquecimento', 'Aquecimento'], ['nomes', 'Gerador de nomes'], ['tesauro', 'Tesauro da Escrita'], ['radio', 'Rádio literária']]],
     ['Mundo', [['wiki', 'Wiki do mundo'], ['conexoes', 'Conexões (teia, grafo, árvore de relações)'], ['tempo', 'Tempo (calendário e timeline)'], ['mapas', 'Mapas'], ['moods', 'Moodboards'], ['dicionario', 'Dicionário']]],
     ['Livro pronto', [['compilar', 'Compilar'], ['mockup', 'Mockup 3D'], ['leitor', 'Modo leitor']]],
   ];
@@ -474,6 +476,7 @@
     ['Conexões: teia, grafo e árvore de relações', 'web', 'conexoes teia grafo arvore relacoes familia obsidian', () => Shell.open({ kind: 'hub', ref: 'conexoes' })],
     ['Tempo: calendário e timeline', 'cal', 'tempo calendario timeline linha do tempo eventos datas', () => Shell.open({ kind: 'hub', ref: 'tempo' })],
     ['Personalizar a barra lateral', 'gear', 'personalizar esconder ferramentas barra lateral limpar', () => Shell.sideCustomize()],
+    ['Insígnias', 'trophy', 'insignias conquistas medalhas badges premios confete marcos', () => Shell.open({ kind: 'badges', ref: 'badges' })],
     ['Metas e visão geral', 'target', 'metas objetivos prazo progresso graficos trackbear ritmo palavras por dia sequencia', () => Shell.open({ kind: 'overview', ref: 'overview' })],
     ['Estatísticas', 'chart', 'estatisticas palavras repetidas vicios contagem', () => Shell.open({ kind: 'stats', ref: 'stats' })],
     ['Localizar e substituir', 'search', 'localizar substituir buscar trocar texto', () => Shell.open({ kind: 'find', ref: 'find' })],
