@@ -53,6 +53,7 @@
       if (it === '-') return m.appendChild(h('hr'));
       if (it.head) return m.appendChild(h('div.mh', it.head));
       const txt = it.desc ? h('span.mi-t', h('span.mi-l', it.label), h('span.mi-d', it.desc)) : h('span.mi-t', it.label);
+      if (it.font) txt.style.fontFamily = it.font;
       const b = h('button' + (it.danger ? '.danger' : '') + (it.on ? '.mi-is-on' : ''), { role: it.on !== undefined ? 'menuitemcheckbox' : 'menuitem', 'aria-checked': it.on !== undefined ? String(!!it.on) : null, onclick: () => { T.closeMenu(); it.fn && it.fn(); } }, it.icon ? icon(it.icon) : null, txt,
         it.key ? h('span.mi-k', it.key) : null, it.on !== undefined ? h('span.mi-on', it.on ? '✓' : '') : null);
       if (it.svg) { const sp = h('span.menu-svg'); sp.innerHTML = it.svg; b.prepend(sp); }

@@ -340,7 +340,7 @@
         tools.innerHTML = '';
         const z = view(mode).zoom;
         // botões agrupados em menus para a barra caber numa linha só
-        const menuBtn = (ic, label, title, items) => h('button.btn.sm.tool-menu', { type: 'button', title, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, items()) }, icon(ic), h('span.lbl', label), h('span.caret', '▾'));
+        const menuBtn = (ic, label, title, items) => h('button.btn.sm.tool-menu', { type: 'button', title, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, items()) }, ic ? icon(ic) : null, h('span.lbl', label), h('span.caret', '▾'));
         const focusOn = !!T.Shell?.el?.classList.contains('focus');
         const cb = curBlock(); const curSt = cb?.dataset?.st || '';
         const stBtn = h('button.btn.sm.tool-menu.st-btn', { type: 'button', title: 'Tipo de parágrafo: texto normal, título ou subtítulo', onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: (e) => T.menuAt(e.currentTarget, [
@@ -384,6 +384,24 @@
           '-', { label: 'Aplicar no livro todo…', desc: 'Alinhar ou recuar todos os capítulos de uma vez', icon: 'book', fn: () => bookFormatModal() },
         ]);
         alBtn.classList.add('al-btn');
+        // 2c. fonte e tamanho da letra (como no Google Docs)
+        const isBook = mode === 'book';
+        const vv = view(mode); const bc = isBook ? bookCfg(S().get(item.pid)) : null;
+        const curFontKey = isBook ? null : (vv.font || 'write');
+        const fontName = isBook ? (BOOK_FACES[bc.face] || BOOK_FACES.literata).name : (FONTS[curFontKey] || FONTS.write)[0];
+        const fontBtn = menuBtn(null, fontName, 'Fonte do texto', () => {
+          if (isBook) return [{ head: 'Letra do livro' }, ...Object.entries(BOOK_FACES).map(([k, f]) => { if (f.f) T.loadFont(f.f); return { label: f.name, font: f.css, on: (bc.face || 'literata') === k, fn: () => { setBookCfg({ face: k }); buildTools(); } }; }), '-', { label: 'Mudar no livro todo…', icon: 'book', fn: () => bookFormatModal() }];
+          const out = []; let g = null;
+          Object.entries(FONTS).forEach(([k, f]) => { if (f[2] !== g) { g = f[2]; out.push({ head: g }); } T.loadFont(k); out.push({ label: f[0], font: f[1], on: k === curFontKey, fn: () => setView(mode, { font: k }) }); });
+          return out;
+        });
+        fontBtn.classList.add('font-btn'); fontBtn.style.fontFamily = isBook ? (BOOK_FACES[bc.face] || BOOK_FACES.literata).css : (FONTS[curFontKey] || FONTS.write)[1];
+        const szVal = isBook ? bc.pt : vv.size;
+        const szSet = (d) => { if (isBook) { setBookCfg({ pt: Math.max(9, Math.min(15, +(bc.pt + d * .5).toFixed(1))) }); buildTools(); } else setView(mode, { size: Math.max(11, Math.min(40, +(vv.size + d).toFixed(1))) }); };
+        const sizeCtl = h('div.size-ctl', { role: 'group', 'aria-label': 'Tamanho da letra', title: isBook ? 'Tamanho da letra do livro (pt)' : 'Tamanho da letra (vale para todo o texto neste modo)' },
+          h('button', { type: 'button', 'aria-label': 'Diminuir a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(-1) }, '−'),
+          h('button.sv', { type: 'button', title: 'Escolher o tamanho', onmousedown: (e) => e.preventDefault(), onclick: (e) => T.menuAt(e.currentTarget, [{ head: isBook ? 'Tamanho (pt)' : 'Tamanho da letra' }, ...(isBook ? [9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 14, 15] : [12, 14, 15, 16, 17, 18, 18.5, 19, 20, 22, 24, 28, 32, 36]).map(n => ({ label: String(n).replace('.', ','), on: n === szVal, fn: () => { if (isBook) { setBookCfg({ pt: n }); buildTools(); } else setView(mode, { size: n }); } }))]) }, String(szVal).replace('.', ',')),
+          h('button', { type: 'button', 'aria-label': 'Aumentar a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(1) }, '+'));
         // 3. como ver a página
         const verBtn = menuBtn('eye', 'Ver: ' + modeName, 'Jeito de escrever (normal, máquina, livro), foco, zoom, letras, cores e fundo', () => {
           const btn = verBtn; const single = !!view('book').single;
@@ -399,6 +417,10 @@
             { label: 'Modo foco', desc: 'Esconde tudo, fica só o texto (Esc sai)', icon: 'focus', on: focusOn, fn: () => T.emit('focus-mode') },
             { label: 'Modo composição', desc: 'Escrever sobre uma imagem ou vídeo em tela cheia', icon: 'image', fn: () => openCompose() },
             { label: 'Ver todas as páginas', desc: 'Miniaturas lado a lado; toque numa para ir até ela', icon: 'grid', fn: () => pagesOverview() },
+            { head: 'Zoom: ' + z + '%' },
+            { label: 'Aumentar zoom', key: 'Ctrl +', fn: () => setView(mode, { zoom: Math.min(220, z + 10) }) },
+            { label: 'Diminuir zoom', key: 'Ctrl −', fn: () => setView(mode, { zoom: Math.max(50, z - 10) }) },
+            z !== 100 ? { label: 'Voltar para 100%', key: 'Ctrl 0', fn: () => setView(mode, { zoom: 100 }) } : null,
             { head: 'Aparência' },
             { label: 'Letras e cores…', desc: 'Tamanho, fonte, alinhamento, cor do papel', icon: 'type', fn: () => T.typePanel(btn, mode, typeOpts) },
             { label: 'Fundo atrás da página…', desc: 'Cenas, imagens ou vídeos', icon: 'image', fn: () => bgPicker(btn) },
@@ -448,7 +470,7 @@
           reading ? h('button.btn.sm.live-chip', { type: 'button', title: 'Parar a leitura em voz alta', onclick: () => readAloud() }, h('span.dot'), 'Lendo · parar') : null,
         ];
         const sep = () => h('span.tsep');
-        tools.append(undoGrp, sep(), stBtn, fmtBtn, alBtn, sep(), verBtn, revBtn, toolBtn, ...live, sep(), zoomCtl, ficha);
+        tools.append(undoGrp, sep(), stBtn, fontBtn, sizeCtl, sep(), fmtBtn, alBtn, sep(), verBtn, revBtn, toolBtn, ...live, sep(), ficha);
       }
       // guarda a seleção do texto ao abrir um menu, para os comandos agirem sobre ela
       let savedRange = null;

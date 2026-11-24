@@ -2128,3 +2128,12 @@ html.dark .bdg-sec, .dark .bdg-sec{ background: hsl(0 0% 100% / .04); }
 body:has(.ed .ed-status) .fabs{ bottom: 68px; }
 body:has(.ed .ed-status) .fabs .fab{ padding: 10px 15px 10px 12px; font-size: 13.5px; }
 @media (max-width: 760px){ body:has(.ed .ed-status) .fabs{ bottom: 60px; } }
+
+/* fonte e tamanho na barra */
+.ed-tools .font-btn .lbl{ max-width: 118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 500; }
+.size-ctl{ display:inline-flex; align-items:center; border-radius: 999px; background: hsl(230 30% 50% / .1); padding: 0 2px; }
+.size-ctl button{ height: 28px; min-width: 26px; border:0; background: transparent; border-radius: 99px; cursor:pointer; font-weight: 800; font-size: 14px; color: var(--ink-2); }
+.size-ctl button:hover{ background: hsl(0 0% 100% / .55); color: var(--ink); }
+.size-ctl .sv{ min-width: 38px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+@container ed (max-width: 1180px){ .ed-tools .font-btn .lbl{ max-width: 84px; } .ed-tools .zoom-ctl .zv{ min-width: 40px; } }
+@container ed (max-width: 940px){ .ed-tools .tool-menu:not(.st-btn):not(.font-btn) .lbl{ display:none; } .ed-tools .st-btn .lbl{ max-width: 76px; } }
