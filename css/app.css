@@ -2084,3 +2084,12 @@ html.dark .bdg-sec, .dark .bdg-sec{ background: hsl(0 0% 100% / .04); }
 .book-flow p.al-c{ text-align:center; text-indent:0; } .book-flow p.al-r{ text-align:right; text-indent:0; } .book-flow p.al-j{ text-align:justify; hyphens:auto; }
 @container ed (max-width: 1180px){ .ed-tools .al-btn .lbl, .ed-tools .ficha-btn .lbl{ display:none; } .ed-tools .tool-menu, .ed-tools .ficha-btn{ padding: 6px 9px; } .ed-tools .tsep{ margin: 0 2px; } }
 @container ed (max-width: 1000px){ .ed-tools .st-btn .lbl{ max-width: 72px; } .ed-tools .tool-menu .caret{ display:none; } }
+
+/* formatar o livro todo */
+.bf-grid{ display:grid; grid-template-columns: 130px 1fr; gap: 12px 14px; align-items:center; margin-top: 14px; }
+.bf-l{ font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.bf-grid .select{ max-width: 260px; }
+.bf-seg button{ padding: 6px 12px; }
+.bf-hint{ margin-top: 6px; font-size: 12px; color: var(--ink-3); }
+.bf-hint .mp-chk{ font-size: 12px; }
+.bf-seg button{ white-space: nowrap; }

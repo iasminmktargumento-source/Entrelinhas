@@ -308,6 +308,7 @@
           { label: 'Pausa no capítulo (⁂)', desc: 'Uma linha de respiro entre dois momentos', icon: 'orn', fn: () => insertBreak() },
           { label: 'Travessão automático', desc: 'Troca - por — enquanto você escreve', icon: 'edit', on: S().prefs().autoDash !== false, fn: () => { S().setPrefs({ autoDash: S().prefs().autoDash === false }); T.toast(S().prefs().autoDash !== false ? 'Travessão automático ligado.' : 'Travessão automático desligado.'); } },
           { label: 'Selecionar todo o texto', icon: 'selall', key: 'Ctrl+A', fn: () => selectAllText() },
+          { label: 'Formatar o livro todo…', desc: 'Fonte, tamanho, alinhamento e recuo em todos os capítulos de uma vez', icon: 'book', fn: () => bookFormatModal() },
         ]);
 
         // 2b. alinhar e recuar
@@ -320,6 +321,7 @@
           { label: 'Aumentar recuo', desc: 'Afasta o parágrafo da margem esquerda', icon: 'indentin', key: 'Ctrl+]', fn: () => { restoreSel(); indentPara(1); } },
           { label: 'Diminuir recuo', desc: 'Traz o parágrafo de volta para a margem', icon: 'indentout', key: 'Ctrl+[', fn: () => { restoreSel(); indentPara(-1); } },
           { label: 'Recuo da primeira linha', desc: 'O espacinho no começo do parágrafo', icon: 'firstline', on: !(curBlock()?.classList?.contains('fl-0')), fn: () => { restoreSel(); toggleFirstLine(); } },
+          '-', { label: 'Aplicar no livro todo…', desc: 'Alinhar ou recuar todos os capítulos de uma vez', icon: 'book', fn: () => bookFormatModal() },
         ]);
         alBtn.classList.add('al-btn');
         // 3. como ver a página
@@ -420,6 +422,55 @@
         const on = !ps[0].classList.contains('fl-0');
         ps.forEach(p => { p.classList.toggle('fl-0', on); if (!p.classList.length) p.removeAttribute('class'); });
         save();
+      }
+      // formatar o livro todo (todos os capítulos de uma vez)
+      function bookFormatModal(){
+        const pid = item.pid; const v0 = view(mode);
+        const st = { font: 'keep', size: 'keep', align: 'keep', centered: false, first: 'keep', clearIn: false };
+        T.modal((box, close) => {
+          const seg = (key, opts) => { const el = h('div.seg.bf-seg'); const draw = () => { el.innerHTML = ''; opts.forEach(([k, l]) => el.appendChild(h('button' + (st[key] === k ? '.on' : ''), { type: 'button', onclick: () => { st[key] = k; draw(); } }, l))); }; draw(); return el; };
+          const fontSel = h('select.select', { onchange: (e) => { st.font = e.target.value; } }, h('option', { value: 'keep' }, 'Não mudar (' + (FONTS[v0.font]?.[0] || 'Literata') + ')'), ...Object.entries(FONTS).map(([k, f]) => h('option', { value: k }, f[0])));
+          const sizeSel = h('select.select', { onchange: (e) => { st.size = e.target.value; } }, h('option', { value: 'keep' }, 'Não mudar (' + (v0.size || '') + ' px)'), ...[15, 16, 17, 18, 19, 20, 22, 24].map(n => h('option', { value: String(n) }, n + ' px')));
+          const chk = (key, label) => h('label.mp-chk', h('input', { type: 'checkbox', onchange: (e) => { st[key] = e.target.checked; } }), label);
+          const nCh = T.MS.flat(pid).filter(i => i.type === 'chapter').length;
+          box.append(
+            h('h2', 'Formatar o livro todo'),
+            h('p.sub', 'Muda todos os capítulos de uma vez, até os anteriores (' + nCh + (nCh === 1 ? ' capítulo' : ' capítulos') + '). O que você escreveu não muda, só a aparência.'),
+            h('div.bf-grid',
+              h('span.bf-l', 'Fonte'), fontSel,
+              h('span.bf-l', 'Tamanho da letra'), sizeSel,
+              h('span.bf-l', 'Alinhamento'), h('div', seg('align', [['keep', 'Não mudar'], ['l', 'Esquerda'], ['j', 'Justificado'], ['c', 'Centralizado']]),
+                h('div.bf-hint', chk('centered', 'Mudar também os parágrafos centralizados ou à direita (separadores, epígrafes…)'))),
+              h('span.bf-l', 'Primeira linha'), seg('first', [['keep', 'Não mudar'], ['on', 'Com recuo'], ['off', 'Sem recuo']]),
+              h('span.bf-l', 'Recuos'), chk('clearIn', 'Tirar os recuos de parágrafo (voltar todos para a margem)')),
+            h('p.muted', { style: { fontSize: '12px', margin: '10px 0 0' } }, 'A fonte e o tamanho valem para os modos Normal, Máquina e Composição. No modo Livro, a letra muda em Ver ▾ › Formato do livro.'),
+            h('div.modal-foot',
+              h('button.btn', { type: 'button', onclick: () => close() }, 'Cancelar'),
+              h('button.btn.primary', { type: 'button', onclick: () => { close(); applyBookFormat(st); } }, icon('check'), 'Aplicar no livro todo')));
+        });
+      }
+      function applyBookFormat(st){
+        const pid = item.pid; save.flush();
+        if (st.font !== 'keep' || st.size !== 'keep') ['normal', 'tw', 'compose'].forEach(m => { const pt = {}; if (st.font !== 'keep') pt.font = st.font; if (st.size !== 'keep') pt.size = +st.size; setView(m, pt); });
+        const undo = []; let n = 0;
+        if (st.align !== 'keep' || st.first !== 'keep' || st.clearIn) {
+          T.MS.flat(pid).filter(i => i.body).forEach(it => {
+            const t = document.createElement('template'); t.innerHTML = it.body;
+            t.content.querySelectorAll('p').forEach(p => {
+              if (st.align !== 'keep') {
+                const special = p.classList.contains('al-c') || p.classList.contains('al-r');
+                if (st.centered || !special || st.align === 'c') { p.classList.remove('al-l', 'al-c', 'al-r', 'al-j'); if (st.align !== 'l') p.classList.add('al-' + st.align); }
+              }
+              if (st.first === 'on') p.classList.remove('fl-0'); else if (st.first === 'off') p.classList.add('fl-0');
+              if (st.clearIn) [1, 2, 3, 4, 5].forEach(k => p.classList.remove('in-' + k));
+              if (!p.classList.length) p.removeAttribute('class');
+            });
+            const html = t.innerHTML;
+            if (html !== it.body) { undo.push([it.id, it.body]); S().update(it.id, { body: html }, { silent: true }); n++; }
+          });
+        }
+        rerender(); buildTools();
+        T.toast(n ? 'Pronto: ' + n + (n === 1 ? ' texto formatado.' : ' textos formatados.') : 'Pronto: aparência do livro atualizada.', undo.length ? { ms: 9000, action: { label: 'Desfazer', fn: () => { save.flush(); undo.forEach(([id, b]) => S().update(id, { body: b }, { silent: true })); rerender(); T.toast('Desfeito.'); } } } : {});
       }
       function curAlign(){ const b = curBlock(); const c = b && b.className || ''; return (c.match(/\bal-([lcrj])\b/) || [])[1] || 'l'; }
       function setBookCfg(patch){ const p = S().get(item.pid); S().update(item.pid, { meta: { book: Object.assign({}, bookCfg(p), patch) } }); if (bookEls) { bookEls.cfg = bookCfg(S().get(item.pid)); bookEls.tr = TRIMS[bookEls.cfg.trim]; prose.classList.toggle('dropcap', !!bookEls.cfg.dropcap); layoutBook(); } }
