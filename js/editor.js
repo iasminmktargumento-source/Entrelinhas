@@ -426,12 +426,22 @@
         const p = S().get(item.pid); const tgt = p?.meta?.targets?.session || 0;
         const sess = T.Session ? T.Session.today(item.pid) : 0;
         status.innerHTML = '';
-        status.append(...[h('span.num', T.fmt(total) + ' palavras'),
+        status.append(...[h('span.num', { title: 'Palavras neste capítulo' }, T.fmt(total) + ' palavras'),
           mode === 'book' ? h('span.num', { title: bookInfo }, 'pág. ' + pageLabel()) : null,
           mode !== 'book' && pages > 0 && view(mode).marks !== false ? h('span.num', { title: 'Páginas em folha A4 na largura atual' }, pages + (pages === 1 ? ' página' : ' páginas')) : null,
           mode === 'book' && bookInfo ? h('span.num.muted', bookInfo) : null,
-          h('span.num', 'hoje ' + T.fmt(sess) + (tgt ? ' / ' + T.fmt(tgt) : '')),
-          tgt ? h('span.bar', h('i', { style: { width: Math.min(100, sess / tgt * 100) + '%' } })) : null].filter(Boolean));
+          h('span.st-sep'),
+          h('span.st-goal', { title: tgt ? 'Palavras escritas hoje, de ' + T.fmt(tgt) + ' da meta do dia (clique para ver as metas)' : 'Palavras escritas hoje (clique para definir uma meta do dia)', onclick: openGoals },
+            h('b', 'Hoje'), h('span.num', T.fmt(sess) + (tgt ? ' / ' + T.fmt(tgt) : '')),
+            tgt ? h('span.bar', h('i', { style: { width: Math.min(100, sess / tgt * 100) + '%' } })) : null),
+          (() => { const tgB = Object.assign({ book: 90000 }, p?.meta?.targets || {}).book || 0;
+            const tal = (p?.meta?.tallies || []).reduce((a, t) => a + (+t.n || 0), 0);
+            const bk = T.MS.words(item.pid) + tal; const pc = tgB ? Math.min(100, Math.round(bk / tgB * 100)) : 0;
+            return h('span.st-goal', { title: 'Palavras do livro inteiro' + (tgB ? ', de ' + T.fmt(tgB) + ' da meta total (' + pc + '%)' : '') + ' (clique para ver as metas)', onclick: openGoals },
+              h('b', 'Livro'), h('span.num', T.fmt(bk) + (tgB ? ' / ' + T.fmt(tgB) : '')),
+              tgB ? h('span.bar', h('i', { style: { width: pc + '%' } })) : null, tgB ? h('span.num.muted', pc + '%') : null); })()].filter(Boolean));
+      }
+      function openGoals(){ T.Shell.open({ kind: 'overview', ref: 'overview' });
       }
 
       /* ----- modos ----- */

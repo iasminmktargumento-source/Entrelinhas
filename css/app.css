@@ -2021,3 +2021,11 @@ body[data-mode="dark"] .bk-chip.late{ color: hsl(32 95% 70%); }
 .menu button.mi-is-on{ background: hsl(var(--hue) 60% 60% / .08); }
 .menu button.mi-is-on svg{ color: var(--accent-ink); }
 .menu .mh + button, .menu .mh{ margin-top: 2px; }
+
+/* rodapé do editor: hoje e meta do livro */
+.ed-status .st-sep{ width:1px; height: 14px; background: var(--glass-line); }
+.ed-status .st-goal{ display:inline-flex; align-items:center; gap: 6px; cursor:pointer; border-radius: 99px; padding: 1px 6px; margin: -1px -6px; }
+.ed-status .st-goal:hover{ background: hsl(0 0% 100% / .45); }
+.ed-status .st-goal b{ font-weight: 700; color: var(--ink); font-size: 11.5px; }
+.ed-status .st-goal .bar{ width: 64px; }
+.ed-status .muted{ color: var(--ink-3); }
