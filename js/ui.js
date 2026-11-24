@@ -57,9 +57,15 @@
       m.appendChild(b);
     });
     document.body.appendChild(m);
-    const r = m.getBoundingClientRect();
-    m.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
-    m.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+    const r = { width: m.offsetWidth, height: m.offsetHeight }; // tamanho real (a animação encolhe o retângulo)
+    m.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
+    // painel longo: fica perto do botão e ganha barra de rolagem
+    const below = innerHeight - y - 10, above = y - 10;
+    if (r.height <= below) m.style.top = y + 'px';
+    else if (below >= 260 || below >= above) { m.style.top = y + 'px'; m.style.maxHeight = Math.max(160, below) + 'px'; }
+    else if (r.height <= above) m.style.top = Math.max(8, y - r.height - 12) + 'px';
+    else { m.style.top = '8px'; m.style.maxHeight = Math.max(160, above - 4) + 'px'; }
+    if (m.scrollHeight > m.clientHeight + 2) m.classList.add('scrolls');
     openMenu = m;
     setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
     return m;
@@ -75,10 +81,13 @@
     if (openPop) { openPop.remove(); openPop = null; }
     const pop = h('div.popover.glass.glass-strong', content);
     document.body.appendChild(pop);
-    const r = anchor.getBoundingClientRect(); const pr = pop.getBoundingClientRect();
+    const r = anchor.getBoundingClientRect(); const pr = { width: pop.offsetWidth, height: pop.offsetHeight };
     pop.style.left = T.clamp(r.left + r.width / 2 - pr.width / 2, 8, innerWidth - pr.width - 8) + 'px';
-    const below = r.bottom + 8 + pr.height < innerHeight;
-    pop.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - pr.height - 8)) + 'px';
+    const spB = innerHeight - r.bottom - 16, spA = r.top - 16;
+    if (pr.height <= spB) pop.style.top = (r.bottom + 8) + 'px';
+    else if (pr.height <= spA) pop.style.top = (r.top - pr.height - 8) + 'px';
+    else if (spB >= spA) { pop.style.top = (r.bottom + 8) + 'px'; pop.style.maxHeight = Math.max(200, spB) + 'px'; }
+    else { pop.style.top = '8px'; pop.style.maxHeight = Math.max(200, spA) + 'px'; }
     openPop = pop;
     const out = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) { pop.remove(); if (openPop === pop) openPop = null; document.removeEventListener('mousedown', out, true); } };
     setTimeout(() => document.addEventListener('mousedown', out, true), 0);

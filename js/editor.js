@@ -309,7 +309,9 @@
         const fnd = T.iconBtn('search', 'Localizar e substituir neste texto (Ctrl+F)', () => findBar(), '.find-btn');
         const bmk = h('button.btn.sm.bm-btn', { type: 'button', title: 'Onde parei: volta direto ao ponto em que você escreveu por último (e marca-páginas seus)', onclick: (e) => bookmarkMenu(e.currentTarget) }, icon('bookmark'), h('span.lbl', 'Onde parei'));
         const pvb = T.iconBtn('grid', 'Ver todas as páginas lado a lado (toque numa para ir até ela)', () => pagesOverview(), '.pv-btn');
-        tools.append(seg(), special, bmk, mic, fnd, pvb, stBtn, anBtn, zoomCtl,
+        const ubtn = (ic, t, c) => h('button.btn.sm.icon-only', { type: 'button', title: t, 'aria-label': t, onmousedown: (e) => { e.preventDefault(); keepSel(); }, onclick: () => cmd(c) }, icon(ic));
+        const undoGrp = h('div.ed-undo', { role: 'group', 'aria-label': 'Desfazer e refazer' }, ubtn('undo', 'Desfazer (Ctrl+Z)', 'undo'), ubtn('redo', 'Refazer (Ctrl+Y ou Ctrl+Shift+Z)', 'redo'));
+        tools.append(undoGrp, seg(), special, bmk, mic, fnd, pvb, stBtn, anBtn, zoomCtl,
           T.iconBtn('type', 'Texto, cores e zoom: tamanho, fonte, fundo, cor das letras', (e) => T.typePanel(e.currentTarget, mode, { bg: (a) => bgPicker(a), bgName: () => { const c = bgCfgOf(mode); return !c ? 'Nenhum' : c.bg.kind === 'scene' ? T.Scenes.get(c.bg.id).name : (c.bg.name || 'Meu fundo'); }, align: alignPara, bookCfg: () => bookCfg(S().get(item.pid)), setBook: (patch) => setBookCfg(patch) })),
           menuBtn('bold', 'Formatar', 'Negrito, itálico, sublinhado, quebra de cena, desfazer', () => [
             { label: 'Negrito (Ctrl+B)', icon: 'bold', fn: () => cmd('bold') },
