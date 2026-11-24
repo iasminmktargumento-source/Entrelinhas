@@ -495,6 +495,7 @@
         }
       }
       const offFocus = T.on('focus-changed', () => { if (!destroyed) buildTools(); });
+      const offTargets = T.on('targets-changed', (e) => { if (!destroyed && e?.pid === item.pid) updateStatus(); });
       const offView = T.on('view-changed', (m) => { if (m === mode) { applyView(); buildTools(); } });
       function insertBreak(){ restoreSel(); document.execCommand('insertHTML', false, '<hr><p><br></p>'); save(); }
 
@@ -1756,7 +1757,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };

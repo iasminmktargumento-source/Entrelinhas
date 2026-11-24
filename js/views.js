@@ -221,7 +221,7 @@
         const pct = Math.min(100, total / Math.max(1, tg.book) * 100);
         const pace = behind == null ? null : behind > 0 ? h('span.gl-st.bad', '▼ ', T.fmt(behind), ' atrás do ritmo') : h('span.gl-st.ok', '▲ ', T.fmt(-behind), ' à frente do ritmo');
         v.append(h('div.tiles',
-          h('div.tile.glass', h('div.k', 'Livro'), h('div.v.num', T.fmt(total)), h('div.s', 'de ' + T.fmt(tg.book) + ' palavras · ' + Math.round(pct) + '%' + (tallyAll ? ' (inclui ' + T.fmt(tallyAll) + ' registradas à mão)' : '')), h('div.prog', h('i', { style: { width: pct + '%' } }))),
+          h('div.tile.glass', h('div.k', 'Livro', h('button.tile-edit', { type: 'button', title: 'Mudar a meta do livro', onclick: () => { const i = v.querySelector('#tg-book'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => { i.focus(); i.select(); }, 350); } } }, icon('edit'), 'mudar meta')), h('div.v.num', T.fmt(total)), h('div.s', 'de ' + T.fmt(tg.book) + ' palavras · ' + Math.round(pct) + '%' + (tallyAll ? ' (inclui ' + T.fmt(tallyAll) + ' registradas à mão)' : '')), h('div.prog', h('i', { style: { width: pct + '%' } }))),
           h('div.tile.glass', h('div.k', 'Hoje'), h('div.v.num', T.fmt(wToday)), h('div.s', 'meta do dia: ' + T.fmt(dayGoal) + (wToday >= dayGoal ? ' · batida ✓' : ' · faltam ' + T.fmt(dayGoal - wToday))), h('div.prog', h('i', { style: { width: Math.min(100, wToday / Math.max(1, dayGoal) * 100) + '%' } }))),
           h('div.tile.glass', h('div.k', 'Para bater o prazo'), h('div.v.num', perDay != null ? T.fmt(perDay) : '—'), h('div.s', end ? 'palavras por dia de escrita · ' + writeDays + ' dias de escrita em ' + daysLeft + ' dias' : 'defina início e fim do projeto abaixo'), pace),
           h('div.tile.glass', h('div.k', 'Previsão de término'), h('div.v.num', { style: { fontSize: '30px' } }, finish ? (finishIn === 0 ? 'meta batida!' : fmtDay(finish, true)) : '—'), h('div.s', finish ? (finishIn === 0 ? '' : 'no ritmo atual de ' + T.fmt(Math.round(avg)) + ' palavras/dia' + (end ? (finish <= end ? ' · antes do prazo ✓' : ' · depois do prazo') : '')) : 'escreva alguns dias para calcular')),
@@ -255,8 +255,12 @@
         v.append(h('div.panel.glass', h('div.row', h('h3.grow', 'Minhas metas'), h('button.btn.sm', { onclick: () => goalModal() }, icon('plus'), 'Nova meta')),
           goals.length ? h('div.gl-goals', goals.map(g => goalCard(g, W, tg))) : h('p.muted', { style: { margin: 0, fontSize: '13px' } }, 'Crie metas com começo e fim (ex.: 50.000 palavras em novembro) ou hábitos (ex.: 500 palavras por dia, 3.000 por semana). Cada uma mostra quanto falta e quanto escrever por dia.')));
         // projeto: datas e metas principais
-        const book = h('input.input.num', { type: 'number', min: 1000, step: 1000, value: tg.book, id: 'tg-book' }); book.onchange = () => setT({ book: +book.value || tg.book });
-        const sess = h('input.input.num', { type: 'number', min: 50, step: 50, value: tg.session, id: 'tg-sess' }); sess.onchange = () => setT({ session: +sess.value || tg.session });
+        const book = h('input.input.num', { type: 'number', min: 100, step: 1000, value: tg.book, id: 'tg-book' });
+        const bookLive = T.debounce(() => { const n = +book.value; if (n >= 100) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { book: n }) } }); T.emit('targets-changed', { pid }); } }, 400);
+        book.oninput = bookLive; book.onchange = () => { bookLive(); bookLive.flush && bookLive.flush(); setTimeout(() => { if (v.isConnected && !v.contains(document.activeElement)) render(); }, 300); };
+        const sess = h('input.input.num', { type: 'number', min: 50, step: 50, value: tg.session, id: 'tg-sess' });
+        sess.oninput = T.debounce(() => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } }, 400);
+        sess.onchange = () => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } setTimeout(() => { if (v.isConnected && !v.contains(document.activeElement)) render(); }, 300); };
         const st = h('input.input', { type: 'date', value: tg.start || '', id: 'tg-st' }); st.onchange = () => setT({ start: st.value });
         const dl = h('input.input', { type: 'date', value: tg.deadline, id: 'tg-dl' }); dl.onchange = () => setT({ deadline: dl.value });
         const dayNames = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'], dayFull = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
@@ -321,7 +325,9 @@
               const b = h('input.input', { type: 'date', value: g.end }); b.oninput = () => { g.end = b.value; info(); };
               const msg = h('p.muted', { style: { margin: 0, fontSize: '13px' } });
               const info = () => { if (g.start && g.end && g.target) { const tgD = Object.assign({ days: [1, 2, 3, 4, 5] }, S().get(pid).meta?.targets || {}).days; const wd = T.Goals.writeDays(parseD(g.start), parseD(g.end), tgD); const nd = daysBetween(parseD(g.start), parseD(g.end)) + 1; msg.textContent = nd > 0 ? 'São ' + nd + ' dias (' + wd + ' de escrita): cerca de ' + T.fmt(Math.ceil(g.target / Math.max(1, wd))) + ' palavras por dia de escrita, ou ' + T.fmt(Math.ceil(g.target / nd)) + ' por dia corrido.' : 'O fim precisa vir depois do começo.'; } else msg.textContent = 'Escolha a quantidade e as datas.'; };
-              body.append(h('label.field', 'Quantas palavras', tgt), h('div.row', { style: { gap: '12px' } }, h('label.field.grow', 'Começa em', a), h('label.field.grow', 'Termina em', b)), msg);
+              if (g.isBook === undefined) g.isBook = !(S().get(pid).meta?.goals || []).some(x => x.isBook);
+              const asBook = h('label.mp-chk', h('input', { type: 'checkbox', checked: !!g.isBook, onchange: (e) => { g.isBook = e.target.checked; } }), 'Esta é a meta total do livro (muda o “Livro” das Metas e do rodapé do editor)');
+              body.append(h('label.field', 'Quantas palavras', tgt), h('div.row', { style: { gap: '12px' } }, h('label.field.grow', 'Começa em', a), h('label.field.grow', 'Termina em', b)), msg, asBook);
               info();
             } else {
               const amt = h('input.input.num', { type: 'number', min: 10, step: 50, value: g.amount }); amt.oninput = () => { g.amount = +amt.value; };
@@ -335,8 +341,13 @@
             h('div.modal-foot', h('button.btn', { onclick: () => close() }, 'Cancelar'), h('button.btn.primary', { onclick: () => {
               g.name = name.value.trim() || (kind === 'habit' ? T.fmt(g.amount) + (g.every === 'week' ? ' por semana' : ' por dia') : T.fmt(g.target) + ' palavras'); g.kind = kind;
               if (kind === 'target' && (!g.start || !g.end || g.end < g.start)) { T.toast('Escolha datas de começo e fim (o fim depois do começo).'); return; }
-              const list = (S().get(pid).meta?.goals || []).filter(x => x.id !== g.id); list.push(g);
-              S().update(pid, { meta: { goals: list } }); close(); render();
+              let list = (S().get(pid).meta?.goals || []).filter(x => x.id !== g.id);
+              if (kind === 'target' && g.isBook) list = list.map(x => x.isBook ? Object.assign({}, x, { isBook: false }) : x); else g.isBook = false;
+              list.push(g);
+              const patch = { goals: list };
+              if (g.isBook) { const cur = S().get(pid).meta?.targets || {}; patch.targets = Object.assign({}, cur, { book: g.target }, cur.deadline ? {} : { deadline: g.end, start: cur.start || g.start }); }
+              S().update(pid, { meta: patch }); close(); render(); T.emit('targets-changed', { pid });
+              if (g.isBook) T.toast('Meta do livro agora é ' + T.fmt(g.target) + ' palavras.');
             } }, icon('check'), 'Salvar meta')));
         });
       }

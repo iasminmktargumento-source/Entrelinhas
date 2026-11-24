@@ -2093,3 +2093,7 @@ html.dark .bdg-sec, .dark .bdg-sec{ background: hsl(0 0% 100% / .04); }
 .bf-hint{ margin-top: 6px; font-size: 12px; color: var(--ink-3); }
 .bf-hint .mp-chk{ font-size: 12px; }
 .bf-seg button{ white-space: nowrap; }
+
+.tile .k .tile-edit{ float:right; display:inline-flex; align-items:center; gap:4px; border:0; background: transparent; color: var(--accent-ink); font-size: 11px; font-weight: 700; cursor:pointer; padding: 2px 6px; border-radius: 99px; text-transform:none; letter-spacing: 0; }
+.tile .k .tile-edit:hover{ background: var(--accent-soft); }
+.tile .k .tile-edit svg{ width: 12px; height: 12px; }
