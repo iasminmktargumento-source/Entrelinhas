@@ -261,8 +261,8 @@
         const sess = h('input.input.num', { type: 'number', min: 50, step: 50, value: tg.session, id: 'tg-sess' });
         sess.oninput = T.debounce(() => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } }, 400);
         sess.onchange = () => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } setTimeout(() => { if (v.isConnected && !v.contains(document.activeElement)) render(); }, 300); };
-        const st = T.dateField(tg.start || '', (k) => setT({ start: k }), { id: 'tg-st', placeholder: 'Escolher o começo', quick: [['Hoje', T.today()], ['Começo do mês', T.today().slice(0, 8) + '01'], ['1º de janeiro', new Date().getFullYear() + '-01-01']] });
-        const dl = T.dateField(tg.deadline || '', (k) => setT({ deadline: k }), { id: 'tg-dl', placeholder: 'Escolher o prazo', near: tg.start || '' });
+        const st = T.dateField(tg.start || '', (k) => setT({ start: k }), { id: 'tg-st', label: 'Começo do projeto', placeholder: 'Escolher o começo', quick: [['Hoje', T.today()], ['Começo do mês', T.today().slice(0, 8) + '01'], ['1º de janeiro', new Date().getFullYear() + '-01-01']] });
+        const dl = T.dateField(tg.deadline || '', (k) => setT({ deadline: k }), { id: 'tg-dl', label: 'Prazo', placeholder: 'Escolher o prazo', near: tg.start || '' });
         const dayNames = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'], dayFull = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
         const daysEl = h('div.days', dayNames.map((n, i) => h('button' + (tg.days.includes(i) ? '.on' : ''), { type: 'button', title: dayFull[i], 'aria-pressed': tg.days.includes(i) ? 'true' : 'false', onclick: () => setT({ days: tg.days.includes(i) ? tg.days.filter(x => x !== i) : [...tg.days, i].sort() }) }, n)));
         v.append(h('div.panel.glass', h('h3', 'Projeto de escrita'),

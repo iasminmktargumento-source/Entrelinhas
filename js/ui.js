@@ -113,13 +113,16 @@
     const lbl = h('span.df-v'); const btn = h('button.input.date-field', { type: 'button', id: opts.id || null, 'aria-haspopup': 'dialog' }, icon('cal'), lbl);
     const show = () => { lbl.textContent = val ? T.fmtDate(val) : (opts.placeholder || 'Escolher data'); btn.classList.toggle('empty', !val); };
     show();
-    const pick = (k) => { val = k || ''; show(); T.closePopover(); onPick && onPick(val); };
+    const pick = (k) => { val = k || ''; show(); T.closePopover(); onPick && onPick(val); if (val) T.toast((opts.label ? opts.label + ': ' : 'Data escolhida: ') + T.fmtDate(val) + ' ✓'); };
     btn.onclick = () => {
       let view = pD(val) || pD(opts.near || '') || new Date(); view = new Date(view.getFullYear(), view.getMonth(), 1, 12);
       const box = h('div.dp');
       const typed = h('input.input.dp-typed', { placeholder: 'dd/mm/aaaa', inputmode: 'numeric', 'aria-label': 'Digitar a data', value: val ? val.split('-').reverse().join('/') : '' });
-      typed.oninput = () => { let t = typed.value.replace(/[^\d]/g, '').slice(0, 8); if (t.length > 4) t = t.slice(0, 2) + '/' + t.slice(2, 4) + '/' + t.slice(4); else if (t.length > 2) t = t.slice(0, 2) + '/' + t.slice(2); typed.value = t; };
-      typed.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { const m = typed.value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) { T.toast('Escreva a data assim: 31/12/2026'); return; } const d = new Date(+m[3], +m[2] - 1, +m[1], 12); if (d.getMonth() !== +m[2] - 1) { T.toast('Essa data não existe.'); return; } pick(T.dayKey(d)); } };
+      const parseTyped = () => { const m = typed.value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) return null; const d = new Date(+m[3], +m[2] - 1, +m[1], 12); return d.getMonth() === +m[2] - 1 ? T.dayKey(d) : false; };
+      const commit = () => { const k = parseTyped(); if (k === null) { T.toast('Escreva a data assim: 31/12/2026, ou clique num dia.'); typed.focus(); return; } if (k === false) { T.toast('Essa data não existe.'); return; } pick(k); };
+      typed.oninput = () => { let t = typed.value.replace(/[^\d]/g, '').slice(0, 8); if (t.length > 4) t = t.slice(0, 2) + '/' + t.slice(2, 4) + '/' + t.slice(4); else if (t.length > 2) t = t.slice(0, 2) + '/' + t.slice(2); typed.value = t;
+        const k = t.length === 10 ? parseTyped() : null; if (k) { view = new Date(pD(k).getFullYear(), pD(k).getMonth(), 1, 12); draw(); typed.focus(); typed.setSelectionRange(10, 10); box.querySelector('.dp-d.pre')?.classList.remove('pre'); const b = [...box.querySelectorAll('.dp-d')].find(x => x.dataset.k === k); b && b.classList.add('pre'); } };
+      typed.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') commit(); };
       const draw = () => {
         box.innerHTML = '';
         const y = view.getFullYear(), mo = view.getMonth();
@@ -136,14 +139,14 @@
         for (let d = 1; d <= nDays; d++) {
           const k = T.dayKey(new Date(y, mo, d, 12));
           const off = (opts.min && k < opts.min) || (opts.max && k > opts.max);
-          grid.appendChild(h('button.dp-d' + (k === val ? '.on' : '') + (k === today ? '.today' : ''), { type: 'button', disabled: off || null, onclick: () => pick(k) }, String(d)));
+          grid.appendChild(h('button.dp-d' + (k === val ? '.on' : '') + (k === today ? '.today' : ''), { type: 'button', 'data-k': k, title: T.fmtDate(k), disabled: off || null, onclick: () => pick(k) }, String(d)));
         }
         box.append(grid);
         const base = pD(opts.near || '') || new Date();
         const add = (days, months) => { const d = new Date(base); if (months) d.setMonth(d.getMonth() + months); if (days) d.setDate(d.getDate() + days); return T.dayKey(d); };
         const quick = opts.quick || [['Hoje', T.today()], ['Em 30 dias', add(30)], ['Em 3 meses', add(0, 3)], ['Em 6 meses', add(0, 6)], ['Fim do ano', new Date().getFullYear() + '-12-31']];
         box.append(h('div.dp-quick', quick.filter(Boolean).map(([l, k]) => h('button.chip', { type: 'button', onclick: () => pick(k) }, l))));
-        box.append(h('div.dp-foot', typed, opts.clear !== false && val ? h('button.btn.sm', { type: 'button', onclick: () => pick('') }, 'Limpar') : null));
+        box.append(h('p.dp-tip', 'Clique num dia ou digite a data e aperte OK.'), h('div.dp-foot', typed, h('button.btn.sm.primary', { type: 'button', onclick: () => commit() }, 'OK'), opts.clear !== false && val ? h('button.btn.sm', { type: 'button', onclick: () => pick('') }, 'Limpar') : null));
       };
       draw();
       T.popover(btn, box);

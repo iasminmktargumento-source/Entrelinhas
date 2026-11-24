@@ -2119,3 +2119,7 @@ html.dark .bdg-sec, .dark .bdg-sec{ background: hsl(0 0% 100% / .04); }
 .dp-foot{ display:flex; gap: 6px; margin-top: 10px; }
 .dp-typed{ flex:1; }
 .popover{ z-index: 120; }
+
+.dp-d.pre{ background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
+.dp-tip{ margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.dp-foot{ margin-top: 6px; }
