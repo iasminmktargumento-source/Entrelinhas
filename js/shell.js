@@ -604,7 +604,7 @@
         h('span.lbl', it.title || 'Sem título'),
         it.meta?.pov ? (() => { const s = h('span.pov', it.meta.pov.slice(0, 10)); s.style.setProperty('--ph', T.povHue(it.meta.pov)); return s; })() : null,
         it.type !== 'folder' && words ? h('span.wc.num', words >= 1000 ? (words / 1000).toFixed(1).replace('.', ',') + 'k' : String(words)) : null,
-        (it.type === 'scene' || it.type === 'chapter') ? (() => { const si = T.statusInfo(T.statusOf(it)); return h('span.stat-pill' + (si.key === 'rascunho' ? '.quiet' : ''), { style: { '--sc': si.color }, title: 'Etapa: ' + si.name + ' (clique para mudar)', onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); T.menu(r.left, r.bottom + 4, [{ head: 'Etapa deste capítulo' }, ...T.statusMenuItems(it)]); } }, h('i'), h('span', si.short)); })() : null,
+        (it.type === 'scene' || it.type === 'chapter') ? (() => { const si = T.statusInfo(T.statusOf(it), it.pid); return h('span.stat-pill' + (si.first ? '.quiet' : ''), { style: { '--sc': si.color }, title: 'Etapa: ' + si.name + ' (clique para mudar)', onclick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); T.menu(r.left, r.bottom + 4, [{ head: 'Etapa deste capítulo' }, ...T.statusMenuItems(it)]); } }, h('i'), h('span', si.short)); })() : null,
         // ações rápidas (aparecem ao passar o mouse): criar dentro e o menu com renomear, apagar…
         (() => { const ct = { part: 'chapter', folder: 'doc' }[it.type]; const nm = { chapter: 'Novo capítulo dentro de', scene: 'Nova cena dentro de', doc: 'Novo documento dentro de' }[ct];
           return h('span.row-acts',
@@ -688,7 +688,7 @@
       it.type === 'part' ? { label: 'Nova parte', icon: TYPE_ICON.part, fn: () => newItem('part', it.parent, it.area) } : null,
       it.type === 'scene' ? { label: 'Nova cena (no mesmo capítulo)', icon: TYPE_ICON.scene, fn: () => newItem('scene', it.parent, it.area) } : null,
       it.type === 'folder' ? { label: 'Nova subpasta', icon: 'folder', fn: () => newItem('folder', it.id, it.area) } : null,
-      (it.type === 'chapter' || it.type === 'scene') ? { head: 'Etapa: ' + T.statusInfo(T.statusOf(it)).name } : null,
+      (it.type === 'chapter' || it.type === 'scene') ? { head: 'Etapa: ' + T.statusInfo(T.statusOf(it), it.pid).name } : null,
       ...((it.type === 'chapter' || it.type === 'scene') ? T.statusMenuItems(it) : []),
       '-',
       { label: 'Renomear', icon: 'edit', fn: () => { const row = Shell.sideEl.querySelector('.tree-row[data-id="' + it.id + '"]'); if (row) rename(it, row); } },

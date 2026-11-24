@@ -4,7 +4,7 @@
   const S = () => T.Store;
   T.Views = {};
 
-  // etapas de um capítulo: [chave, nome, abreviação, cor]
+  // etapas de um capítulo: cada livro tem a sua lista, que você pode editar
   T.STATUSES = [
     ['ideia', 'Ideia / esboço', 'Ideia', 'hsl(270 40% 66%)'],
     ['rascunho', 'Rascunho', 'R1', 'hsl(40 85% 55%)'],
@@ -12,24 +12,70 @@
     ['rascunho3', 'Rascunho 3', 'R3', 'hsl(12 80% 56%)'],
     ['revisando', 'Em revisão', 'Rev.', 'hsl(200 80% 55%)'],
     ['beta', 'Com leitores beta', 'Beta', 'hsl(180 60% 42%)'],
-    ['pronto', 'Final', 'Final', 'hsl(145 60% 42%)'],
+    ['pronto', 'Final', 'Final', 'hsl(145 60% 42%)', true],
   ];
-  const STATUS_COLORS = Object.fromEntries(T.STATUSES.map(x => [x[0], x[3]]));
-  T.STATUS_COLORS = new Proxy(STATUS_COLORS, { get: (o, k) => o[k] || 'hsl(220 12% 60%)' });
-  T.statusInfo = (k) => { k = k || 'rascunho'; const f = T.STATUSES.find(x => x[0] === k); return f ? { key: k, name: f[1], short: f[2], color: f[3] } : { key: k, name: k, short: k.length > 6 ? k.slice(0, 5) + '.' : k, color: 'hsl(220 12% 60%)' }; };
+  T.stages = (pid) => { const st = pid && S().get(pid)?.meta?.stages; return (Array.isArray(st) && st.length ? st : T.STATUSES.map(([k, name, short, color, done]) => ({ k, name, short, color, done: !!done }))); };
+  T.defaultStage = (pid) => { const st = T.stages(pid); return (st.find(x => x.k === 'rascunho') || st.find(x => !x.done) || st[0]).k; };
+  T.statusInfo = (k, pid) => { const st = T.stages(pid || T.Shell?.pid); k = k || T.defaultStage(pid || T.Shell?.pid); const f = st.find(x => x.k === k); return f ? { key: k, name: f.name, short: f.short || f.name, color: f.color, done: !!f.done, first: f.k === T.defaultStage(pid || T.Shell?.pid) } : { key: k, name: k, short: k.length > 6 ? k.slice(0, 5) + '.' : k, color: 'hsl(220 12% 60%)', done: /pronto|final|revisado/i.test(k) }; };
+  T.STATUS_COLORS = new Proxy({}, { get: (o, k) => typeof k === 'string' ? T.statusInfo(k).color : undefined });
+  T.isDone = (it) => T.statusInfo(T.statusOf(it), it?.pid).done;
   // capítulo com texto único: a etapa fica no capítulo (e no texto escondido dele)
-  T.statusOf = (it) => { if (!it) return 'rascunho'; if (it.meta?.status) return it.meta.status; if (it.type === 'chapter') { const k = S().children(it.pid, it.id); if (k.length === 1 && k[0].meta?.status) return k[0].meta.status; } return 'rascunho'; };
+  T.statusOf = (it) => { if (!it) return ''; if (it.meta?.status) return it.meta.status; if (it.type === 'chapter') { const k = S().children(it.pid, it.id); if (k.length === 1 && k[0].meta?.status) return k[0].meta.status; } return T.defaultStage(it.pid); };
   T.setStatus = (it, k) => {
     S().update(it.id, { meta: { status: k } });
-    if (it.type === 'chapter') S().children(it.pid, it.id).filter(c => c.type === 'scene').forEach(c => { if (S().children(it.pid, it.id).length === 1) S().update(c.id, { meta: { status: k } }, { silent: true }); });
+    if (it.type === 'chapter' && S().children(it.pid, it.id).length === 1) S().children(it.pid, it.id).filter(c => c.type === 'scene').forEach(c => S().update(c.id, { meta: { status: k } }, { silent: true }));
     if (it.type === 'scene' && it.parent) { const ch = S().get(it.parent); if (ch && ch.type === 'chapter' && S().children(ch.pid, ch.id).length === 1) S().update(ch.id, { meta: { status: k } }, { silent: true }); }
     T.emit('meta-changed', it.id); T.emit('tree-changed');
   };
-  T.statusMenuItems = (it) => { const cur = T.statusOf(it); const items = T.STATUSES.map(([k, l, , c]) => ({ label: l, on: k === cur, icon: 'dot', fn: () => T.setStatus(it, k), color: c }));
-    if (!T.STATUSES.some(x => x[0] === cur)) items.push({ label: cur, on: true, fn: () => {} });
-    items.push({ label: 'Outra etapa…', icon: 'edit', fn: async () => { const v = await T.ask('Nome da etapa', { value: '', text: 'Ex.: Reescrita, Para cortar, Esperando a editora…' }); if (v && v.trim()) T.setStatus(it, v.trim()); } });
+  const saveStages = (pid, list) => { S().update(pid, { meta: { stages: list } }); T.emit('tree-changed'); };
+  T.statusMenuItems = (it) => { const cur = T.statusOf(it); const st = T.stages(it.pid);
+    const items = st.map(x => ({ label: x.name, on: x.k === cur, icon: 'dot', color: x.color, fn: () => T.setStatus(it, x.k) }));
+    if (!st.some(x => x.k === cur)) items.push({ label: cur, on: true, fn: () => {} });
+    items.push({ label: 'Nova etapa…', icon: 'plus', fn: async () => { const v = await T.ask('Nome da nova etapa', { value: '', text: 'Ex.: Reescrita, Para cortar, Esperando a editora…' }); if (v && v.trim()) { const list = T.stages(it.pid).slice(); const k = 'e' + T.id().slice(0, 6); list.push({ k, name: v.trim(), short: v.trim().slice(0, 6), color: 'hsl(' + Math.floor(Math.random() * 360) + ' 60% 55%)', done: false }); saveStages(it.pid, list); T.setStatus(it, k); } } });
+    items.push({ label: 'Editar etapas…', desc: 'Renomear, mudar cor, ordem, apagar', icon: 'edit', fn: () => T.stagesModal(it.pid) });
     return items; };
-  T.statusSelect = (it, onChange) => { const cur = T.statusOf(it); const sel = h('select.select', { 'aria-label': 'Etapa' }, T.STATUSES.map(([k, l]) => h('option', { value: k, selected: k === cur }, l)), !T.STATUSES.some(x => x[0] === cur) ? h('option', { value: cur, selected: true }, cur) : null); sel.onchange = () => { T.setStatus(it, sel.value); onChange && onChange(sel.value); }; return sel; };
+  T.statusSelect = (it, onChange) => { const cur = T.statusOf(it); const st = T.stages(it.pid); const sel = h('select.select', { 'aria-label': 'Etapa' }, st.map(x => h('option', { value: x.k, selected: x.k === cur }, x.name)), !st.some(x => x.k === cur) ? h('option', { value: cur, selected: true }, cur) : null); sel.onchange = () => { T.setStatus(it, sel.value); onChange && onChange(sel.value); }; return sel; };
+  // editar a lista de etapas do livro
+  T.stagesModal = (pid) => {
+    let list = T.stages(pid).map(x => Object.assign({}, x));
+    const used = (k) => S().all(pid).filter(i => (i.type === 'chapter' || i.type === 'scene') && i.meta?.status === k).filter(i => i.type === 'chapter' || !S().get(i.parent) || S().get(i.parent).type !== 'chapter').length;
+    const hexOf = (c) => { const d = h('div', { style: { color: c, display: 'none' } }); document.body.appendChild(d); const m = getComputedStyle(d).color.match(/\d+/g) || [0, 0, 0]; d.remove(); return '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join(''); };
+    T.modal((box, close) => {
+      const rows = h('div.stg-list');
+      const draw = () => {
+        rows.innerHTML = '';
+        list.forEach((x, i) => {
+          const n = used(x.k);
+          rows.appendChild(h('div.stg-row',
+            h('input.stg-color', { type: 'color', value: hexOf(x.color), title: 'Cor da etapa', oninput: (e) => { x.color = e.target.value; } }),
+            h('input.input.stg-name', { value: x.name, 'aria-label': 'Nome da etapa', placeholder: 'Nome', oninput: (e) => { x.name = e.target.value; } }),
+            h('input.input.stg-short', { value: x.short || '', 'aria-label': 'Etiqueta curta', placeholder: 'Etiqueta', maxlength: 8, title: 'Etiqueta curta que aparece na barra lateral', oninput: (e) => { x.short = e.target.value; } }),
+            h('label.stg-done', { title: 'Capítulos nesta etapa contam como prontos (insígnias e progresso)' }, h('input', { type: 'checkbox', checked: !!x.done, onchange: (e) => { x.done = e.target.checked; } }), 'pronto'),
+            h('span.stg-n.muted', n ? n + (n === 1 ? ' cap.' : ' caps.') : ''),
+            h('button.icon-btn', { type: 'button', title: 'Subir', disabled: i === 0 || null, onclick: () => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; draw(); } }, '↑'),
+            h('button.icon-btn', { type: 'button', title: 'Descer', disabled: i === list.length - 1 || null, onclick: () => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; draw(); } }, '↓'),
+            h('button.icon-btn.danger', { type: 'button', title: 'Apagar etapa', disabled: list.length <= 1 || null, onclick: async () => {
+              if (n) { const others = list.filter(y => y !== x); const to = others.find(y => y.k === 'rascunho') || others[0];
+                if (!(await T.confirm('Apagar “' + x.name + '”?', n + (n === 1 ? ' capítulo está' : ' capítulos estão') + ' nesta etapa. Eles vão para “' + to.name + '”.', 'Apagar', true))) return;
+                x._moveTo = to.k; }
+              list.splice(i, 1); (box._removed = box._removed || []).push(x); draw(); } }, icon('trash'))));
+        });
+      };
+      draw();
+      box.append(h('h2', 'Etapas dos capítulos'), h('p.sub', 'A lista é deste livro. Mude nomes, cores e ordem, marque quais contam como “pronto”, ou crie e apague etapas.'),
+        h('div.stg-head', h('span'), h('span', 'Nome'), h('span', 'Etiqueta'), h('span', 'Conta como pronto'), h('span'), h('span'), h('span'), h('span')),
+        rows,
+        h('button.btn.sm', { type: 'button', onclick: () => { list.push({ k: 'e' + T.id().slice(0, 6), name: 'Nova etapa', short: 'Nova', color: 'hsl(' + Math.floor(Math.random() * 360) + ' 60% 55%)', done: false }); draw(); setTimeout(() => { const ins = rows.querySelectorAll('.stg-name'); const last = ins[ins.length - 1]; last && (last.focus(), last.select()); }, 30); } }, icon('plus'), 'Nova etapa'),
+        h('div.modal-foot',
+          h('button.btn', { type: 'button', onclick: () => { if (T.confirm) T.confirm('Voltar às etapas de fábrica?', 'Ideia, Rascunho, Rascunho 2, Rascunho 3, Em revisão, Leitores beta e Final. Capítulos em etapas que você criou continuam com o nome delas.', 'Voltar').then(ok => { if (ok) { S().update(pid, { meta: { stages: null } }); T.emit('tree-changed'); close(); } }); } }, 'Voltar ao padrão'),
+          h('span.grow'),
+          h('button.btn', { type: 'button', onclick: () => close() }, 'Cancelar'),
+          h('button.btn.primary', { type: 'button', onclick: () => {
+            list.forEach(x => { x.name = (x.name || '').trim() || 'Sem nome'; x.short = (x.short || '').trim() || x.name.slice(0, 6); });
+            (box._removed || []).forEach(x => { if (!x._moveTo) return; S().all(pid).filter(i => (i.type === 'chapter' || i.type === 'scene') && i.meta?.status === x.k).forEach(i => S().update(i.id, { meta: { status: x._moveTo } }, { silent: true })); });
+            saveStages(pid, list.map(({ k, name, short, color, done }) => ({ k, name, short, color, done: !!done }))); close(); T.toast('Etapas salvas.'); } }, 'Salvar')));
+    }, { wide: true });
+  };
   const povHue = (s) => { let x = 0; for (const c of s || '') x = (x * 31 + c.charCodeAt(0)) % 360; return x; };
   T.povHue = povHue;
 
@@ -63,7 +109,7 @@
           const card = h('div.card', { draggable: 'true' },
             h('button.icon-btn.sm.open', { title: 'Abrir texto', onclick: () => T.Shell.open({ kind: 'doc', ref: k.id }) }, icon('pop')),
             title, syn,
-            h('div.cf', h('span.stat', { style: { width: '8px', height: '8px', borderRadius: '50%', background: T.STATUS_COLORS[T.statusOf(k)] } }), st,
+            h('div.cf', h('span.stat', { style: { width: '8px', height: '8px', borderRadius: '50%', background: T.statusInfo(T.statusOf(k), k.pid).color } }), st,
               k.meta?.pov ? h('span', { style: { fontWeight: 700, color: `hsl(${povHue(k.meta.pov)} 60% 38%)` } }, k.meta.pov) : null,
               h('span.num', { style: { marginLeft: 'auto' } }, T.fmt(words) + ' pal.'),
               h('button.icon-btn.sm', { title: 'Trocar a cor da etiqueta', style: { color: `hsl(${lh} 80% 50%)` }, onclick: () => { const i = T.HUES.indexOf(lh); S().update(k.id, { meta: { label: T.HUES[(i + 1) % T.HUES.length] } }); render(); } }, icon('spark'))));

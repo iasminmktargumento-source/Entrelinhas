@@ -116,7 +116,7 @@
     const chs = all.filter(i => i.type === 'chapter');
     const chWords = (c) => T.MS.docs(c).reduce((a, d) => a + (d.meta?.words ?? T.words(d.body)), 0) + (c.body ? T.words(c.body) : 0);
     const chapters = chs.filter(c => chWords(c) >= 500).length;
-    const isDone = (i) => /pronto|final|revisado/i.test(i.meta?.status || '');
+    const isDone = (i) => T.isDone ? T.isDone(i) : /pronto|final|revisado/i.test(i.meta?.status || '');
     const doneCh = chs.filter(c => isDone(c) || (T.MS.docs(c).length && T.MS.docs(c).every(isDone))).length;
     const sp = p.meta?.sprints || [];
     const every = S().all(pid);
