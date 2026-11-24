@@ -237,6 +237,8 @@
       const item = S().get(tab.ref);
       if (!item) { root.appendChild(h('div.pane-empty', 'Este texto foi apagado.')); return { destroy(){} }; }
       const proj = S().get(item.pid);
+      // a fonte e o tamanho escolhidos para este livro voltam sempre que você abre qualquer parte dele
+      { const f = proj?.meta?.fmt || {}; if (f.font || f.size) { const all = Object.assign({}, S().prefs().view || {}); let ch = false; ['normal', 'tw', 'compose'].forEach(m => { const cur = Object.assign({}, VIEW_DEF[m], all[m]); if ((f.font && cur.font !== f.font) || (f.size && cur.size !== f.size)) { all[m] = Object.assign(cur, f.font ? { font: f.font } : {}, f.size ? { size: f.size } : {}); ch = true; } }); if (ch) S().setPrefs({ view: all }); } }
       const prefs = S().prefs();
       let mode = tab.mode || prefs.defaultMode || 'normal';
       let docs = T.MS.docs(item);
@@ -398,15 +400,15 @@
         const fontBtn = menuBtn(null, fontName, 'Fonte do texto', () => {
           if (isBook) return [{ head: 'Letra do livro' }, ...Object.entries(BOOK_FACES).map(([k, f]) => { if (f.f) T.loadFont(f.f); return { label: f.name, font: f.css, on: (bc.face || 'literata') === k, fn: () => { setBookCfg({ face: k }); buildTools(); } }; }), '-', { label: 'Mudar no livro todo…', icon: 'book', fn: () => bookFormatModal() }];
           const out = []; let g = null;
-          Object.entries(FONTS).forEach(([k, f]) => { if (f[2] !== g) { g = f[2]; out.push({ head: g }); } T.loadFont(k); out.push({ label: f[0], font: f[1], on: k === curFontKey, fn: () => setView(mode, { font: k }) }); });
+          Object.entries(FONTS).forEach(([k, f]) => { if (f[2] !== g) { g = f[2]; out.push({ head: g }); } T.loadFont(k); out.push({ label: f[0], font: f[1], on: k === curFontKey, fn: () => setAllFont(k) }); });
           return out;
         });
         fontBtn.classList.add('font-btn'); fontBtn.style.fontFamily = isBook ? (BOOK_FACES[bc.face] || BOOK_FACES.literata).css : (FONTS[curFontKey] || FONTS.write)[1];
         const szVal = isBook ? bc.pt : vv.size;
-        const szSet = (d) => { if (isBook) { setBookCfg({ pt: Math.max(8, Math.min(18, +(bc.pt + d * .5).toFixed(1))) }); buildTools(); } else setView(mode, { size: Math.max(10, Math.min(60, +(vv.size + d).toFixed(1))) }); };
+        const szSet = (d) => { if (isBook) { setBookCfg({ pt: Math.max(8, Math.min(18, +(bc.pt + d * .5).toFixed(1))) }); buildTools(); } else setAllSize(Math.max(10, Math.min(60, +(vv.size + d).toFixed(1)))); };
         const sizeCtl = h('div.size-ctl', { role: 'group', 'aria-label': 'Tamanho da letra', title: isBook ? 'Tamanho da letra do livro (pt)' : 'Tamanho da letra (vale para todo o texto neste modo)' },
           h('button', { type: 'button', 'aria-label': 'Diminuir a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(-1) }, '−'),
-          h('button.sv', { type: 'button', title: 'Escolher o tamanho', onmousedown: (e) => e.preventDefault(), onclick: (e) => T.menuAt(e.currentTarget, [{ head: isBook ? 'Tamanho (pt)' : 'Tamanho da letra' }, ...(isBook ? [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 16, 18] : T.FONT_SIZES).map(n => ({ label: String(n).replace('.', ','), on: n === szVal, fn: () => { if (isBook) { setBookCfg({ pt: n }); buildTools(); } else setView(mode, { size: n }); } })), '-', { label: 'Outro tamanho…', icon: 'edit', fn: async () => { const v = await T.ask('Tamanho da letra', { value: String(szVal), text: isBook ? 'De 8 a 18 pt. Pode usar vírgula, ex.: 11,5.' : 'De 10 a 60 px. Pode usar vírgula, ex.: 18,5.' }); const n = parseFloat(String(v || '').replace(',', '.')); if (!n) return; if (isBook) { if (n >= 8 && n <= 18) { setBookCfg({ pt: n }); buildTools(); } else T.toast('No modo Livro, use de 8 a 18 pt.'); } else if (n >= 10 && n <= 60) setView(mode, { size: n }); else T.toast('Use um tamanho de 10 a 60.'); } }]) }, String(szVal).replace('.', ',')),
+          h('button.sv', { type: 'button', title: 'Escolher o tamanho', onmousedown: (e) => e.preventDefault(), onclick: (e) => T.menuAt(e.currentTarget, [{ head: isBook ? 'Tamanho (pt)' : 'Tamanho da letra' }, ...(isBook ? [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 16, 18] : T.FONT_SIZES).map(n => ({ label: String(n).replace('.', ','), on: n === szVal, fn: () => { if (isBook) { setBookCfg({ pt: n }); buildTools(); } else setAllSize(n); } })), '-', { label: 'Outro tamanho…', icon: 'edit', fn: async () => { const v = await T.ask('Tamanho da letra', { value: String(szVal), text: isBook ? 'De 8 a 18 pt. Pode usar vírgula, ex.: 11,5.' : 'De 10 a 60 px. Pode usar vírgula, ex.: 18,5.' }); const n = parseFloat(String(v || '').replace(',', '.')); if (!n) return; if (isBook) { if (n >= 8 && n <= 18) { setBookCfg({ pt: n }); buildTools(); } else T.toast('No modo Livro, use de 8 a 18 pt.'); } else if (n >= 10 && n <= 60) setAllSize(n); else T.toast('Use um tamanho de 10 a 60.'); } }]) }, String(szVal).replace('.', ',')),
           h('button', { type: 'button', 'aria-label': 'Aumentar a letra', onmousedown: (e) => e.preventDefault(), onclick: () => szSet(1) }, '+'));
         // 3. como ver a página
         const verBtn = menuBtn('eye', 'Ver: ' + modeName, 'Jeito de escrever (normal, máquina, livro), foco, zoom, letras, cores e fundo', () => {
@@ -512,6 +514,10 @@
         ps.forEach(p => { p.classList.remove('fl-0', 'fl-1'); if (want !== defOn) p.classList.add(want ? 'fl-1' : 'fl-0'); if (!p.classList.length) p.removeAttribute('class'); });
         save();
       }
+      // fonte e tamanho valem para o livro inteiro, em todos os modos de escrever (e a letra do modo Livro acompanha)
+      const FONT_TO_FACE = { write: 'literata', book: 'garamond', georgia: 'georgia', times: 'times', baskerville: 'baskerville', crimson: 'crimson', lora: 'lora', cormorant: 'cormorant', palatino: 'palatino', ptserif: 'ptserif', sourceserif: 'sourceserif' };
+      function setAllFont(k){ ['normal', 'tw', 'compose'].forEach(m => setView(m, { font: k })); if (FONT_TO_FACE[k]) setBookCfg({ face: FONT_TO_FACE[k] }); S().update(item.pid, { meta: { fmt: Object.assign({}, S().get(item.pid)?.meta?.fmt || {}, { font: k }) } }); }
+      function setAllSize(n){ ['normal', 'tw', 'compose'].forEach(m => setView(m, { size: n })); S().update(item.pid, { meta: { fmt: Object.assign({}, S().get(item.pid)?.meta?.fmt || {}, { size: n }) } }); }
       // formatar o livro todo (todos os capítulos de uma vez)
       function bookFormatModal(){
         const pid = item.pid; const v0 = view(mode);
@@ -541,7 +547,8 @@
       }
       function applyBookFormat(st){
         const pid = item.pid; save.flush();
-        if (st.font !== 'keep' || st.size !== 'keep') ['normal', 'tw', 'compose'].forEach(m => { const pt = {}; if (st.font !== 'keep') pt.font = st.font; if (st.size !== 'keep') pt.size = +st.size; setView(m, pt); });
+        if (st.font !== 'keep') setAllFont(st.font);
+        if (st.size !== 'keep') setAllSize(+st.size);
         const undo = []; let n = 0;
         const oldFmt = S().get(pid)?.meta?.fmt || null;
         if (st.align !== 'keep' || st.first !== 'keep') { const nf = Object.assign({}, oldFmt || {}); if (st.align !== 'keep') nf.align = st.align; if (st.first !== 'keep') nf.first = st.first; S().update(pid, { meta: { fmt: nf } }); applyFmt(); T.emit('book-fmt', { pid }); }
