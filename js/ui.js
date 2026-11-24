@@ -104,6 +104,56 @@
   T.menuButton = (ic, label, title, onOpen, cls = '') => h('button.btn.sm.tool-menu' + cls, { type: 'button', title, onclick: (e) => onOpen(e.currentTarget) }, ic ? T.icon(ic) : null, label, h('span.caret', '▾'));
 
   T.closePopover = () => { if (openPop) openPop.remove(); };
+  /* campo de data fácil: mostra "24 de nov. de 2026" e abre um calendário com atalhos */
+  const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const pD = (k) => { if (!k) return null; const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+  T.fmtDate = (k, long = true) => { const d = pD(k); return d ? d.toLocaleDateString('pt-BR', long ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  T.dateField = (value, onPick, opts = {}) => {
+    let val = value || '';
+    const lbl = h('span.df-v'); const btn = h('button.input.date-field', { type: 'button', id: opts.id || null, 'aria-haspopup': 'dialog' }, icon('cal'), lbl);
+    const show = () => { lbl.textContent = val ? T.fmtDate(val) : (opts.placeholder || 'Escolher data'); btn.classList.toggle('empty', !val); };
+    show();
+    const pick = (k) => { val = k || ''; show(); T.closePopover(); onPick && onPick(val); };
+    btn.onclick = () => {
+      let view = pD(val) || pD(opts.near || '') || new Date(); view = new Date(view.getFullYear(), view.getMonth(), 1, 12);
+      const box = h('div.dp');
+      const typed = h('input.input.dp-typed', { placeholder: 'dd/mm/aaaa', inputmode: 'numeric', 'aria-label': 'Digitar a data', value: val ? val.split('-').reverse().join('/') : '' });
+      typed.oninput = () => { let t = typed.value.replace(/[^\d]/g, '').slice(0, 8); if (t.length > 4) t = t.slice(0, 2) + '/' + t.slice(2, 4) + '/' + t.slice(4); else if (t.length > 2) t = t.slice(0, 2) + '/' + t.slice(2); typed.value = t; };
+      typed.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { const m = typed.value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) { T.toast('Escreva a data assim: 31/12/2026'); return; } const d = new Date(+m[3], +m[2] - 1, +m[1], 12); if (d.getMonth() !== +m[2] - 1) { T.toast('Essa data não existe.'); return; } pick(T.dayKey(d)); } };
+      const draw = () => {
+        box.innerHTML = '';
+        const y = view.getFullYear(), mo = view.getMonth();
+        const nav = (n) => { view = new Date(y, mo + n, 1, 12); draw(); };
+        const yearSel = h('select.select.dp-year', { 'aria-label': 'Ano', onchange: (e) => { view = new Date(+e.target.value, mo, 1, 12); draw(); } }, Array.from({ length: 16 }, (_, i) => new Date().getFullYear() - 5 + i).map(yy => h('option', { value: yy, selected: yy === y }, String(yy))));
+        box.append(h('div.dp-head',
+          h('button.icon-btn', { type: 'button', 'aria-label': 'Mês anterior', onclick: () => nav(-1) }, '‹'),
+          h('b', MESES[mo]), yearSel,
+          h('button.icon-btn', { type: 'button', 'aria-label': 'Próximo mês', onclick: () => nav(1) }, '›')));
+        const grid = h('div.dp-grid', ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => h('span.dp-wd', d)));
+        const first = new Date(y, mo, 1).getDay(); const nDays = new Date(y, mo + 1, 0).getDate();
+        for (let i = 0; i < first; i++) grid.appendChild(h('span'));
+        const today = T.today();
+        for (let d = 1; d <= nDays; d++) {
+          const k = T.dayKey(new Date(y, mo, d, 12));
+          const off = (opts.min && k < opts.min) || (opts.max && k > opts.max);
+          grid.appendChild(h('button.dp-d' + (k === val ? '.on' : '') + (k === today ? '.today' : ''), { type: 'button', disabled: off || null, onclick: () => pick(k) }, String(d)));
+        }
+        box.append(grid);
+        const base = pD(opts.near || '') || new Date();
+        const add = (days, months) => { const d = new Date(base); if (months) d.setMonth(d.getMonth() + months); if (days) d.setDate(d.getDate() + days); return T.dayKey(d); };
+        const quick = opts.quick || [['Hoje', T.today()], ['Em 30 dias', add(30)], ['Em 3 meses', add(0, 3)], ['Em 6 meses', add(0, 6)], ['Fim do ano', new Date().getFullYear() + '-12-31']];
+        box.append(h('div.dp-quick', quick.filter(Boolean).map(([l, k]) => h('button.chip', { type: 'button', onclick: () => pick(k) }, l))));
+        box.append(h('div.dp-foot', typed, opts.clear !== false && val ? h('button.btn.sm', { type: 'button', onclick: () => pick('') }, 'Limpar') : null));
+      };
+      draw();
+      T.popover(btn, box);
+      setTimeout(() => typed.focus(), 30);
+    };
+    btn.setValue = (k) => { val = k || ''; show(); };
+    btn.getValue = () => val;
+    return btn;
+  };
+
 
   // escolhe um arquivo; quando o navegador deixa, já abre na pasta Downloads
   T.pickFile = (accept, opts = {}) => new Promise(res => {

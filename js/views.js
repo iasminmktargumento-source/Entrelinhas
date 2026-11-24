@@ -261,8 +261,8 @@
         const sess = h('input.input.num', { type: 'number', min: 50, step: 50, value: tg.session, id: 'tg-sess' });
         sess.oninput = T.debounce(() => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } }, 400);
         sess.onchange = () => { const n = +sess.value; if (n >= 10) { S().update(pid, { meta: { targets: Object.assign({}, S().get(pid).meta?.targets || tg, { session: n }) } }); T.emit('targets-changed', { pid }); } setTimeout(() => { if (v.isConnected && !v.contains(document.activeElement)) render(); }, 300); };
-        const st = h('input.input', { type: 'date', value: tg.start || '', id: 'tg-st' }); st.onchange = () => setT({ start: st.value });
-        const dl = h('input.input', { type: 'date', value: tg.deadline, id: 'tg-dl' }); dl.onchange = () => setT({ deadline: dl.value });
+        const st = T.dateField(tg.start || '', (k) => setT({ start: k }), { id: 'tg-st', placeholder: 'Escolher o começo', quick: [['Hoje', T.today()], ['Começo do mês', T.today().slice(0, 8) + '01'], ['1º de janeiro', new Date().getFullYear() + '-01-01']] });
+        const dl = T.dateField(tg.deadline || '', (k) => setT({ deadline: k }), { id: 'tg-dl', placeholder: 'Escolher o prazo', near: tg.start || '' });
         const dayNames = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'], dayFull = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
         const daysEl = h('div.days', dayNames.map((n, i) => h('button' + (tg.days.includes(i) ? '.on' : ''), { type: 'button', title: dayFull[i], 'aria-pressed': tg.days.includes(i) ? 'true' : 'false', onclick: () => setT({ days: tg.days.includes(i) ? tg.days.filter(x => x !== i) : [...tg.days, i].sort() }) }, n)));
         v.append(h('div.panel.glass', h('h3', 'Projeto de escrita'),
@@ -321,8 +321,8 @@
             body.append(h('label.field', 'Nome da meta', name), h('div.field', h('span', 'Tipo'), kseg));
             if (kind === 'target') {
               const tgt = h('input.input.num', { type: 'number', min: 100, step: 500, value: g.target }); tgt.oninput = () => { g.target = +tgt.value; info(); };
-              const a = h('input.input', { type: 'date', value: g.start }); a.oninput = () => { g.start = a.value; info(); };
-              const b = h('input.input', { type: 'date', value: g.end }); b.oninput = () => { g.end = b.value; info(); };
+              const a = T.dateField(g.start, (k) => { g.start = k; info(); }, { clear: false });
+              const b = T.dateField(g.end, (k) => { g.end = k; info(); }, { placeholder: 'Escolher o fim', near: g.start });
               const msg = h('p.muted', { style: { margin: 0, fontSize: '13px' } });
               const info = () => { if (g.start && g.end && g.target) { const tgD = Object.assign({ days: [1, 2, 3, 4, 5] }, S().get(pid).meta?.targets || {}).days; const wd = T.Goals.writeDays(parseD(g.start), parseD(g.end), tgD); const nd = daysBetween(parseD(g.start), parseD(g.end)) + 1; msg.textContent = nd > 0 ? 'São ' + nd + ' dias (' + wd + ' de escrita): cerca de ' + T.fmt(Math.ceil(g.target / Math.max(1, wd))) + ' palavras por dia de escrita, ou ' + T.fmt(Math.ceil(g.target / nd)) + ' por dia corrido.' : 'O fim precisa vir depois do começo.'; } else msg.textContent = 'Escolha a quantidade e as datas.'; };
               if (g.isBook === undefined) g.isBook = !(S().get(pid).meta?.goals || []).some(x => x.isBook);
@@ -332,7 +332,7 @@
             } else {
               const amt = h('input.input.num', { type: 'number', min: 10, step: 50, value: g.amount }); amt.oninput = () => { g.amount = +amt.value; };
               const ev = h('div.seg', [['day', 'Por dia'], ['week', 'Por semana']].map(([k, l]) => h('button' + (g.every === k ? '.on' : ''), { type: 'button', onclick: () => { g.every = k; draw(); } }, l)));
-              const a = h('input.input', { type: 'date', value: g.start }); a.oninput = () => { g.start = a.value; };
+              const a = T.dateField(g.start, (k) => { g.start = k; }, { clear: false });
               body.append(h('div.row', { style: { gap: '12px' } }, h('label.field.grow', 'Quantas palavras', amt), h('div.field', h('span', 'A cada'), ev)), h('label.field', 'Contar a partir de', a));
             }
           };
