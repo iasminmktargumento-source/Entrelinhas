@@ -121,7 +121,8 @@
         h('div.grow', h('b', p.title || 'Sem título'), h('div.muted', { style: { fontSize: '12px' } }, tpl.name))),
       fields.length ? h('div.ent-fields', fields.map(f => h('div', h('span.muted', f.k + ': '), f.v))) : null,
       first ? h('p.ent-sum', first.slice(0, 180) + (first.length > 180 ? '…' : '')) : null,
-      h('button.btn.sm', { onclick: () => { tip && tip.remove(); tip = null; T.Shell.open({ kind: 'page', ref: p.id }, { side: true }); } }, icon('pop'), 'Abrir página'));
+      h('div.row', { style: { gap: '6px' } }, (() => { const vv = T.Voices && T.Voices.voiceFor(p.pid, p.title); return vv && (vv.clips || []).length ? h('button.btn.sm.primary', { onclick: () => T.Voices.play(vv) }, icon('play'), 'Ouvir a voz') : null; })(),
+        h('button.btn.sm', { onclick: () => { tip && tip.remove(); tip = null; T.Shell.open({ kind: 'page', ref: p.id }, { side: true }); } }, icon('pop'), 'Abrir página')));
   }
   function wordCard(w){
     const lang = S().get(w.parent);

@@ -1329,7 +1329,8 @@
             h('button.btn.sm.syn-btn', { type: 'button', title: 'Sinônimos da palavra selecionada', onclick: () => showSynonyms('syn') }, icon('replace'), 'Sinônimos'),
             h('button.btn.sm.syn-btn', { type: 'button', title: 'O que a palavra significa, com exemplos de uso', onclick: () => showSynonyms('dict') }, icon('book'), 'Dicionário'),
             T.iconBtn('comment', 'Comentar', () => addComment(), '.sm'),
-            T.iconBtn('bookmark', 'Marca-página nesta frase (Ctrl+Shift+B)', () => addMark(), '.sm'));
+            T.iconBtn('bookmark', 'Marca-página nesta frase (Ctrl+Shift+B)', () => addMark(), '.sm'),
+            T.iconBtn('voice', 'Voz deste personagem (biblioteca de vozes)', () => { const w = getSelection().toString().trim().replace(/[.,;:!?…“”"]+$/g, ''); if (!w || w.split(/\s+/).length > 4) { T.toast('Selecione o nome do personagem.'); return; } const vv = T.Voices.voiceFor(item.pid, w) || T.Voices.newVoice(item.pid, w); if ((vv.clips || []).length) T.Voices.play(vv); else T.Voices.upload(item.pid, vv.id); hideSelPop(); }, '.sm'));
           selPop.addEventListener('mousedown', e => e.preventDefault());
           document.body.appendChild(selPop);
         }
@@ -1941,6 +1942,18 @@
       prose.addEventListener('input', decorate);
       prose.addEventListener('input', protectSoon);
       prose.addEventListener('input', drawMarksSoon);
+      // biblioteca de vozes: nomes com voz ficam sublinhados; clicar no nome mostra "▶ Ouvir"
+      const VCH = (window.CSS && CSS.highlights && window.Highlight) ? new Highlight() : null;
+      const drawVoices = () => { if (!VCH || destroyed || !T.Voices) return; VCH.clear(); T.Voices.ranges(item.pid, prose).forEach(r => VCH.add(r)); CSS.highlights.set('vc-name', VCH); };
+      const drawVoicesSoon = T.debounce(drawVoices, 700);
+      prose.addEventListener('input', drawVoicesSoon);
+      setTimeout(drawVoices, 700);
+      const offVoices = T.on('voices-changed', (e) => { if (e?.pid === item.pid) drawVoices(); });
+      prose.addEventListener('mouseup', () => setTimeout(() => {
+        if (!T.Voices || destroyed) return; const sl = getSelection(); if (!sl.rangeCount || !prose.contains(sl.anchorNode)) return;
+        if (sl.isCollapsed) { const hit = T.Voices.voiceAtPoint(item.pid, sl.anchorNode, sl.anchorOffset); if (hit && (hit.v.clips || []).length) T.Voices.showChip(hit.v, hit.range.getBoundingClientRect()); }
+        else { const vv = T.Voices.voiceFor(item.pid, sl.toString()); if (vv) T.Voices.showChip(vv, sl.getRangeAt(0).getBoundingClientRect()); }
+      }, 10));
       setTimeout(() => { drawMarks(); const pm = T.pendingMark; if (pm && pm.doc === item.id && Date.now() - (pm.ts || 0) < 6000) { const m = (S().get(item.id)?.meta?.marks || []).find(x => x.id === pm.id); if (m) setTimeout(() => { if (!destroyed && ed.isConnected) goMark(m, 'Seu último marca-página: “' + m.name + '”'); }, 350); } }, 600);
       setTimeout(() => protectDict(true), 400);
       const offDict = T.on('items', (ev) => { if (ev.item?.id === item.pid || ev.item?.type === 'page') protectSoon(); });
@@ -1952,7 +1965,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); if (BMH) CSS.highlights.delete('bm-hl'); if (piHost) T.Postits?.detach(piHost); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); offVoices(); if (VCH) CSS.highlights.delete('vc-name'); if (BMH) CSS.highlights.delete('bm-hl'); if (piHost) T.Postits?.detach(piHost); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };

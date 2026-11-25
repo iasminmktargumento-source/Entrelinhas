@@ -440,6 +440,7 @@
         const wt = wikiTree(pid, pages, f);
         wd.el.append(
           ...VV('wiki', foldRow('fold:wiki', 'book', 'Wiki do mundo', () => Shell.open({ kind: 'wiki', ref: 'wiki' }), pages.length ? h('span.chip.gray.num', String(pages.length)) : null, [...wt.childNodes])).filter(Boolean),
+          V('vozes', toolRow('voice', 'Biblioteca de vozes', () => Shell.open({ kind: 'voices', ref: 'voices' }), (() => { const n = (S().get(pid)?.meta?.voices || []).length; return n ? h('span.chip.gray.num', String(n)) : null; })())),
           V('conexoes', toolRow('web', 'Conexões (teia, grafo, árvore)', () => Shell.open({ kind: 'hub', ref: 'conexoes' }))),
           V('tempo', toolRow('cal', 'Tempo (calendário e timeline)', () => Shell.open({ kind: 'hub', ref: 'tempo' }), (() => { const n = S().all(pid).filter(i => i.type === 'event').length; return n ? h('span.chip.gray.num', String(n)) : null; })())),
           ...VV('mapas', foldRow('fold:maps', 'map', 'Mapas', () => Shell.open({ kind: 'maps', ref: 'maps' }), maps.length ? h('span.chip.gray.num', String(maps.length)) : null,
@@ -459,7 +460,7 @@
   };
   const SIDE_ITEMS = [
     ['Escrever', [['ideias', 'Ideias'], ['progresso', 'Metas e progresso (metas, estatísticas, curva de tensão)'], ['postits', 'Post-its (brainstorm)'], ['insignias', 'Insígnias'], ['aquecimento', 'Aquecimento'], ['nomes', 'Gerador de nomes'], ['tesauro', 'Tesauro da Escrita'], ['radio', 'Rádio literária']]],
-    ['Mundo', [['wiki', 'Wiki do mundo'], ['conexoes', 'Conexões (teia, grafo, árvore de relações)'], ['tempo', 'Tempo (calendário e timeline)'], ['mapas', 'Mapas'], ['moods', 'Moodboards'], ['dicionario', 'Dicionário']]],
+    ['Mundo', [['wiki', 'Wiki do mundo'], ['vozes', 'Biblioteca de vozes'], ['conexoes', 'Conexões (teia, grafo, árvore de relações)'], ['tempo', 'Tempo (calendário e timeline)'], ['mapas', 'Mapas'], ['moods', 'Moodboards'], ['dicionario', 'Dicionário']]],
     ['Livro pronto', [['compilar', 'Compilar'], ['mockup', 'Mockup 3D'], ['leitor', 'Modo leitor']]],
   ];
   Shell.sideCustomize = function(){
@@ -484,6 +485,7 @@
     ['Conexões: teia, grafo e árvore de relações', 'web', 'conexoes teia grafo arvore relacoes familia obsidian', () => Shell.open({ kind: 'hub', ref: 'conexoes' })],
     ['Tempo: calendário e timeline', 'cal', 'tempo calendario timeline linha do tempo eventos datas', () => Shell.open({ kind: 'hub', ref: 'tempo' })],
     ['Personalizar a barra lateral', 'gear', 'personalizar esconder ferramentas barra lateral limpar', () => Shell.sideCustomize()],
+    ['Biblioteca de vozes', 'voice', 'vozes voz personagem audio áudio sotaque como fala ouvir gravação', () => Shell.open({ kind: 'voices', ref: 'voices' })],
     ['Post-its (brainstorm)', 'sticky', 'post it postit notas adesivas brainstorm quadro ideias mural', () => Shell.open({ kind: 'postits', ref: 'postits' })],
     ['Insígnias', 'trophy', 'insignias conquistas medalhas badges premios confete marcos', () => Shell.open({ kind: 'badges', ref: 'badges' })],
     ['Metas e visão geral', 'target', 'metas objetivos prazo progresso graficos trackbear ritmo palavras por dia sequencia', () => Shell.open({ kind: 'overview', ref: 'overview' })],
