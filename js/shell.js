@@ -247,7 +247,7 @@
     // ideias rápidas
     const fab = h('div.fabs', h('button.fab.glass.glass-strong', { onclick: () => Shell.openTesauro(), title: 'Abrir o Tesauro da Escrita ao lado do texto' }, icon('feather'), 'Tesauro'),
       h('button.fab.glass.glass-strong', { onclick: quickIdea, title: 'Anotar uma ideia rápida' }, icon('spark'), 'Ideia'));
-    root.appendChild(fab);
+    root.appendChild(fab); setTimeout(() => Shell.renderFocusDock && Shell.renderFocusDock(), 0);
     Shell.layout = normalizeLayout(layout || p.meta?.layout);
     if (!Shell.layout.panes.some(pn => pn.tabs.length)) {
       const firstDoc = T.MS.flat(pid).find(i => i.type === 'scene' || i.type === 'chapter');
@@ -1201,20 +1201,21 @@
     else { const p = s.pauses[s.pauses.length - 1]; if (p && !p.end) p.end = Date.now(); s.runAt = Date.now(); T.toast('Sprint retomado.'); }
     spSave(); Shell.renderTop();
   }
-  // no modo foco: Sprint e o companheiro ficam junto do Tesauro e da Ideia, no canto de baixo
+  // canto de baixo: o companheiro (sempre que houver livro aberto) e, no modo foco, o Sprint
+  T.on('buddy-changed', () => { try { Shell.renderFocusDock(); } catch (e) {} });
   Shell.renderFocusDock = function(){
     const fabs = document.querySelector('.fabs'); if (!fabs) return;
     fabs.querySelectorAll('.fd-item').forEach(x => x.remove());
-    if (!Shell.el || !Shell.el.classList.contains('focus')) return;
+    const inFocus = !!(Shell.el && Shell.el.classList.contains('focus'));
     const s = Shell.sprint;
-    const sp = s ? h('span.fab.fd-item.fd-sprint' + (s.runAt ? '' : '.paused'),
+    const sp = s ? h('span.fab.glass.glass-strong.fd-item.fd-sprint' + (s.runAt ? '' : '.paused'),
         T.iconBtn(s.runAt ? 'pause' : 'play', s.runAt ? 'Pausar sprint' : 'Continuar sprint', pauseSprint, '.sm'),
         h('button.fd-sp-btn', { type: 'button', title: 'Ver como está indo', onclick: (e) => sprintLive(e.currentTarget) }, h('span.num.fd-sp-time', fmtLeft(s.min * 60000 - spElapsed(s))), h('span.fd-sp-words.sp-w', '+' + T.fmt(spWords(s)))),
         T.iconBtn('stop', 'Encerrar sprint', () => endSprint(true), '.sm'))
-      : h('button.fab.fd-item', { type: 'button', title: 'Começar um sprint de escrita', onclick: (e) => sprintMenu(e.currentTarget) }, icon('clock'), h('span', 'Sprint'));
+      : h('button.fab.glass.glass-strong.fd-item', { type: 'button', title: 'Começar um sprint de escrita', onclick: (e) => sprintMenu(e.currentTarget) }, icon('clock'), h('span', 'Sprint'));
     const bd = T.Buddy && T.Buddy.prefs && T.Buddy.prefs();
-    const buddy = bd ? h('button.fab.fd-item' + (T.Buddy.isOpen() ? '.on' : ''), { type: 'button', title: T.Buddy.isOpen() ? 'Guardar o ' + bd.name : 'Chamar o ' + bd.name, onclick: () => { T.Buddy.toggle(); setTimeout(Shell.renderFocusDock, 50); } }, icon('spark'), h('span', bd.name)) : null;
-    fabs.prepend(...[sp, buddy].filter(Boolean));
+    const buddy = bd && Shell.pid ? h('button.fab.glass.glass-strong.fd-item.fd-buddy' + (T.Buddy.isOpen() ? '.on' : ''), { type: 'button', title: (T.Buddy.isOpen() ? 'Guardar o ' : 'Chamar o ') + bd.name + ' · ' + T.fmt(bd.coins || 0) + ' moedas', onclick: () => { T.Buddy.toggle(); } }, h('i.bd-coin'), h('span.num', T.fmt(bd.coins || 0)), h('span.fd-bname', bd.name)) : null;
+    fabs.prepend(...[inFocus ? sp : null, buddy].filter(Boolean));
   };
   function sprintPill(){
     const s = Shell.sprint; const left = s.min * 60000 - spElapsed(s);

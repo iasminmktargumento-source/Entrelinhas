@@ -46,7 +46,7 @@
   ];
   const DEF = { on: false, sprint: true, coins: 0, name: 'Nanquim', scene: 'mesa', hat: '', neck: '', pet: '', color: 'tinta', owned: ['mesa', 'h:', 'n:', 'p:', 'c:tinta'], pos: null, mini: false, total: 0, bonusDay: '' };
   const B = () => Object.assign({}, DEF, S().prefs().buddy || {});
-  const setB = (patch) => { S().setPrefs({ buddy: Object.assign(B(), patch) }); };
+  const setB = (patch) => { S().setPrefs({ buddy: Object.assign(B(), patch) }); T.emit('buddy-changed'); };
 
   /* ---------- desenho ---------- */
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -290,11 +290,14 @@
     win = h('div.bd-win.glass.glass-strong' + (cfg.mini ? '.mini' : ''),
       h('div.bd-head', h('b.bd-name', cfg.name), h('span.bd-money', { title: 'Moedas: cada palavra escrita vale uma' }, h('i.bd-coin'), h('span.bd-coins', T.fmt(cfg.coins))), h('span.grow'),
         T.iconBtn('spark', 'Loja: lugares e acessórios', () => shop(), '.sm'),
-        T.iconBtn(cfg.mini ? 'up' : 'down', 'Encolher ou abrir', () => { const m = !win.classList.contains('mini'); win.classList.toggle('mini', m); setB({ mini: m }); }, '.sm.bd-min'),
-        T.iconBtn('x', 'Fechar o companheiro', () => { close(); setB({ on: false }); T.toast('Companheiro guardado. Ele volta no próximo sprint (ou em Sprint › Companheiro).'); }, '.sm')),
+        (() => { const b = T.iconBtn(cfg.mini ? 'up' : 'down', cfg.mini ? 'Abrir a janelinha' : 'Encolher (fica só o nome e as moedas)', () => { const m = !win.classList.contains('mini'); win.classList.toggle('mini', m); setB({ mini: m }); b.replaceChildren(icon(m ? 'up' : 'down')); b.title = m ? 'Abrir a janelinha' : 'Encolher (fica só o nome e as moedas)'; }, '.sm.bd-min'); return b; })(),
+        T.iconBtn('x', 'Guardar o companheiro', () => { close(); setB({ on: false }); T.toast(cfg.name + ' foi guardado. Para chamar de volta, use o botão dele no canto de baixo.'); }, '.sm')),
       cv,
       h('div.bd-foot', h('div.row', h('span.bd-lbl'), h('span.grow'), h('span.bd-sub')), h('div.bd-bar', h('i'))));
     document.body.appendChild(win);
+    win.querySelector('.bd-head').addEventListener('dblclick', () => win.querySelector('.bd-min')?.click());
+    win.querySelector('.bd-name').addEventListener('click', () => { if (win.classList.contains('mini')) win.querySelector('.bd-min')?.click(); });
+    T.emit('buddy-changed');
     const pos = cfg.pos; if (pos) { win.style.left = T.clamp(pos.x, 0, innerWidth - 120) + 'px'; win.style.top = T.clamp(pos.y, 0, innerHeight - 60) + 'px'; win.style.right = 'auto'; win.style.bottom = 'auto'; }
     // arrastar pela barra de cima
     const head = win.querySelector('.bd-head');
@@ -320,7 +323,7 @@
     offs = [() => document.removeEventListener('keydown', onKey, true), offW, () => clearInterval(iv)];
     updateFoot(); loop();
   }
-  function close(){ cancelAnimationFrame(raf); offs.forEach(f => f()); offs = []; if (win) win.remove(); win = null; }
+  function close(){ cancelAnimationFrame(raf); offs.forEach(f => f()); offs = []; if (win) win.remove(); win = null; T.emit('buddy-changed'); }
 
   /* ---------- loja ---------- */
   function shop(){
