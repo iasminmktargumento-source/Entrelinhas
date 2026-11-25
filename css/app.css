@@ -2271,3 +2271,6 @@ body.pi-hidden .pi-glue{ display:none; }
 .pi-menu-foot{ display:flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--glass-line); padding-top: 8px; }
 .pi-from{ display:inline-flex; align-items:center; gap: 3px; border: 0; background: hsl(0 0% 100% / .55); border-radius: 99px; padding: 1px 7px 1px 5px; font-size: 10.5px; font-weight: 700; color: hsl(0 0% 20% / .7); cursor: pointer; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
 .pi-from svg{ width: 11px; height: 11px; }
+
+/* frase marcada com marca-página */
+::highlight(bm-hl){ background-color: hsl(48 100% 58% / .5); text-decoration: underline; text-decoration-color: hsl(38 95% 45%); text-decoration-thickness: 2px; }

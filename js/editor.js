@@ -459,7 +459,7 @@
 
         // 5. ferramentas
         const toolBtn = menuBtn('feather', 'Ferramentas', 'Onde parei, ditado e leitura em voz alta', () => [
-          { label: 'Onde parei e marca-páginas…', desc: 'Volta ao ponto em que você escreveu por último', icon: 'bookmark', fn: () => bookmarkMenu(toolBtn) },
+          { label: 'Marca-página…', desc: 'Marcar uma frase, ir aos marcados ou onde parei', icon: 'bookmark', fn: () => bookmarkMenu(toolBtn) },
           { label: 'Post-its ao lado', desc: 'Quadro de brainstorm aberto ao lado do texto', icon: 'sticky', fn: () => T.Shell.open({ kind: 'postits', ref: 'postits' }, { side: true }) },
           { head: 'Voz' },
           { label: dictOn ? 'Parar o ditado' : 'Ditar', desc: 'Fale e o texto aparece no cursor (diga “vírgula”, “ponto”…)', icon: 'voice', on: dictOn, fn: () => toggleDictation() },
@@ -909,20 +909,39 @@
       // guarda sozinho onde você escreveu por último (por texto aberto)
       const saveLast = T.debounce(() => { if (destroyed) return; const pos = posOfCaret(); if (!pos) return; S().update(item.id, { meta: { lastPos: Object.assign(pos, { at: Date.now() }) } }, { silent: true }); }, 1200);
       prose.addEventListener('input', saveLast);
+      // marca-página: guarda a frase selecionada (ou o ponto do cursor) e ela fica destacada no texto
+      const BMH = (window.CSS && CSS.highlights && window.Highlight) ? new Highlight() : null;
+      function markRanges(){
+        const out = []; (S().get(item.id)?.meta?.marks || []).forEach(m => { if (!m.len) return; const a = rangeOfPos(m), b = rangeOfPos({ sid: m.sid, off: m.off + m.len }); if (!a || !b) return; const r = document.createRange(); try { r.setStart(a.startContainer, a.startOffset); r.setEnd(b.startContainer, b.startOffset); out.push([m, r]); } catch (e) {} });
+        return out;
+      }
+      function drawMarks(){ if (!BMH || destroyed) return; BMH.clear(); markRanges().forEach(([, r]) => BMH.add(r)); CSS.highlights.set('bm-hl', BMH); }
+      const drawMarksSoon = T.debounce(drawMarks, 400);
+      async function addMark(){
+        restoreSel(); const sel = getSelection(); if (!sel.rangeCount || !prose.contains(sel.anchorNode)) { T.toast('Selecione a frase (ou clique no ponto) que quer marcar.'); return; }
+        const rg = sel.getRangeAt(0); const sec = (rg.startContainer.nodeType === 1 ? rg.startContainer : rg.startContainer.parentElement).closest('section'); if (!sec) return;
+        const pre = document.createRange(); pre.setStart(sec, 0); pre.setEnd(rg.startContainer, rg.startOffset);
+        const quote = sec.contains(rg.endContainer) ? rg.toString() : '';
+        const pos = { sid: sec.dataset.id, off: pre.toString().length, len: quote.length, quote: quote.slice(0, 300) };
+        const name = await T.ask('Nome do marca-página', { value: (quote || snippetAt(pos)).replace(/\s+/g, ' ').trim().slice(0, 40) || 'Marca-página', ok: 'Marcar' }); if (name == null) return;
+        const m = Object.assign(pos, { id: T.id(), name: name.trim() || 'Marca-página', at: Date.now() });
+        const list = (S().get(item.id).meta?.marks || []).slice(); list.push(m);
+        S().update(item.id, { meta: { marks: list } });
+        S().update(item.pid, { meta: { lastMark: { doc: item.id, id: m.id, at: m.at } } });
+        drawMarks(); T.toast('Marca-página guardado. Quando você abrir o livro, ele abre aqui.');
+      }
+      function goMark(m, label){ goToPos(m, label); if (m.len) { const b = rangeOfPos({ sid: m.sid, off: m.off + m.len }), a = rangeOfPos(m); if (a && b) { const r = document.createRange(); r.setStart(a.startContainer, a.startOffset); r.setEnd(b.startContainer, b.startOffset); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } } }
       function bookmarkMenu(btn){
         const it = S().get(item.id); const last = it?.meta?.lastPos; const marks = (it?.meta?.marks || []).slice().sort((a, b) => b.at - a.at);
         const go = (p, lb) => () => goToPos(p, lb);
+        const lm = S().get(item.pid)?.meta?.lastMark;
         T.menuAt(btn, [
           { head: 'Marca-página' },
-          last ? { label: 'Ir para onde parei · ' + T.relTime(last.at), icon: 'bookmark', fn: go(last, 'Aqui foi onde você escreveu por último.') } : { label: 'Ainda não há onde parei: comece a escrever', icon: 'bookmark', fn: () => {} },
-          { label: 'Marcar este ponto (onde está o cursor)…', icon: 'plus', fn: async () => {
-            restoreSel(); const pos = posOfCaret(); if (!pos) { T.toast('Clique no texto, no ponto que quer marcar.'); return; }
-            const name = await T.ask('Nome do marca-página', { value: snippetAt(pos).slice(-30) || 'Marca-página', ok: 'Marcar' }); if (name == null) return;
-            const list = (S().get(item.id).meta?.marks || []).slice(); list.push(Object.assign(pos, { id: T.id(), name: name.trim() || 'Marca-página', at: Date.now() }));
-            S().update(item.id, { meta: { marks: list } }); T.toast('Marca-página guardado.');
-          } },
-          ...(marks.length ? ['-', { head: 'Meus marca-páginas' }, ...marks.map(m => ({ label: m.name + ' · ' + T.relTime(m.at), icon: 'pin', fn: go(m, '“' + m.name + '”') }))] : []),
-          ...(marks.length ? ['-', { label: 'Apagar marca-páginas…', icon: 'trash', fn: (e) => T.menuAt(btn, marks.map(m => ({ label: 'Apagar “' + m.name + '”', icon: 'trash', fn: () => { S().update(item.id, { meta: { marks: (S().get(item.id).meta?.marks || []).filter(x => x.id !== m.id) } }); T.toast('Apagado.'); } }))) }] : []),
+          { label: 'Marcar a frase selecionada', desc: 'Selecione um trecho antes; ele fica destacado em amarelo', icon: 'plus', key: 'Ctrl+Shift+B', fn: () => addMark() },
+          ...(marks.length ? [{ head: 'Meus marca-páginas neste capítulo' }, ...marks.map(m => ({ label: m.name, desc: (lm && lm.id === m.id ? 'último marcado · ' : '') + T.relTime(m.at), icon: 'bookmark', fn: () => goMark(m, '“' + m.name + '”') }))] : []),
+          { head: 'Onde parei' },
+          last ? { label: 'Ir para onde escrevi por último', desc: T.relTime(last.at), icon: 'feather', fn: go(last, 'Aqui foi onde você escreveu por último.') } : { label: 'Ainda não há: comece a escrever', icon: 'feather', fn: () => {} },
+          ...(marks.length ? ['-', { label: 'Apagar marca-páginas…', icon: 'trash', fn: () => T.menuAt(btn, marks.map(m => ({ label: 'Apagar “' + m.name + '”', icon: 'trash', fn: () => { S().update(item.id, { meta: { marks: (S().get(item.id).meta?.marks || []).filter(x => x.id !== m.id) } }); if (lm && lm.id === m.id) S().update(item.pid, { meta: { lastMark: null } }); drawMarks(); T.toast('Marca-página apagado.'); } }))) }] : []),
         ]);
       }
 
@@ -1308,7 +1327,8 @@
             T.iconBtn('italic', 'Itálico', () => cmd('italic'), '.sm'),
             T.iconBtn('mark', 'Marca-texto (escolher a cor)', (e) => hlPalette(e.currentTarget), '.sm'),
             h('button.btn.sm.syn-btn', { type: 'button', title: 'Sinônimos da palavra selecionada', onclick: () => showSynonyms() }, icon('replace'), 'Sinônimos'),
-            T.iconBtn('comment', 'Comentar', () => addComment(), '.sm'));
+            T.iconBtn('comment', 'Comentar', () => addComment(), '.sm'),
+            T.iconBtn('bookmark', 'Marca-página nesta frase (Ctrl+Shift+B)', () => addMark(), '.sm'));
           selPop.addEventListener('mousedown', e => e.preventDefault());
           document.body.appendChild(selPop);
         }
@@ -1741,6 +1761,7 @@
         if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
         const al = e.shiftKey && { KeyL: 'l', KeyE: 'c', KeyR: 'r', KeyJ: 'j' }[e.code];
         if (al) { e.preventDefault(); e.stopPropagation(); alignPara(al); buildTools(); return; }
+        if (e.shiftKey && e.code === 'KeyB') { e.preventDefault(); addMark(); return; }
         if (!e.shiftKey && (e.key === ']' || e.code === 'BracketRight')) { e.preventDefault(); indentPara(1); }
         else if (!e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) { e.preventDefault(); indentPara(-1); }
       });
@@ -1918,6 +1939,8 @@
       const decorate = T.debounce(() => { if (!destroyed) T.Ent.decorate(prose, item.pid); }, 700);
       prose.addEventListener('input', decorate);
       prose.addEventListener('input', protectSoon);
+      prose.addEventListener('input', drawMarksSoon);
+      setTimeout(() => { drawMarks(); const pm = T.pendingMark; if (pm && pm.doc === item.id && Date.now() - (pm.ts || 0) < 6000) { const m = (S().get(item.id)?.meta?.marks || []).find(x => x.id === pm.id); if (m) setTimeout(() => { if (!destroyed && ed.isConnected) goMark(m, 'Seu último marca-página: “' + m.name + '”'); }, 350); } }, 600);
       setTimeout(() => protectDict(true), 400);
       const offDict = T.on('items', (ev) => { if (ev.item?.id === item.pid || ev.item?.type === 'page') protectSoon(); });
       const offEnt = T.on('items', (ev) => { if (['page', 'word', 'lang'].includes(ev.item?.type)) decorate(); });
@@ -1928,7 +1951,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); if (piHost) T.Postits?.detach(piHost); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); if (BMH) CSS.highlights.delete('bm-hl'); if (piHost) T.Postits?.detach(piHost); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };

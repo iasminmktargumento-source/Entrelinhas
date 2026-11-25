@@ -248,6 +248,8 @@
     const fab = h('div.fabs', h('button.fab.glass.glass-strong', { onclick: () => Shell.openTesauro(), title: 'Abrir o Tesauro da Escrita ao lado do texto' }, icon('feather'), 'Tesauro'),
       h('button.fab.glass.glass-strong', { onclick: quickIdea, title: 'Anotar uma ideia rápida' }, icon('spark'), 'Ideia'));
     root.appendChild(fab); setTimeout(() => Shell.renderFocusDock && Shell.renderFocusDock(), 0);
+    // abre direto no último marca-página, com a frase destacada
+    { const lm = p.meta?.lastMark; if (lm && lm.doc && S().get(lm.doc)) { T.pendingMark = Object.assign({ ts: Date.now() }, lm); setTimeout(() => { T.pendingMark = null; }, 6000); setTimeout(() => { if (Shell.pid === pid) Shell.open({ kind: 'doc', ref: lm.doc }); }, 350); } }
     Shell.layout = normalizeLayout(layout || p.meta?.layout);
     if (!Shell.layout.panes.some(pn => pn.tabs.length)) {
       const firstDoc = T.MS.flat(pid).find(i => i.type === 'scene' || i.type === 'chapter');
