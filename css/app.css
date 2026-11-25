@@ -2236,3 +2236,38 @@ body.typing #pi-layer .pi-note:not(.editing){ opacity: .85; }
 .pi-glue .pi-note.mini .pi-text, .pi-glue .pi-note.mini .pi-more, .pi-glue .pi-note.mini .pi-rz{ display:none; }
 body.pi-hidden .pi-glue{ display:none; }
 .mode-normal .pan, .mode-tw .pan{ overflow: visible; }
+/* formatos de post-it */
+.pi-note[data-shape="quadrado"] .pi-text{ min-height: 168px; }
+.pi-note[data-shape="retangulo"] .pi-text{ min-height: 96px; }
+.pi-note[data-shape="tira"] .pi-text{ min-height: 210px; font-size: 14px; }
+.pi-note[data-shape="redondo"]{ border-radius: 22px; }
+.pi-note[data-shape="redondo"] .pi-grip{ border-radius: 22px 22px 0 0; }
+.pi-note[data-shape="redondo"] .pi-text{ min-height: 140px; padding-left: 16px; padding-right: 16px; }
+.pi-note[data-shape="fita"]{ border-radius: 2px; }
+.pi-note[data-shape="fita"] .pi-grip{ background: transparent; }
+.pi-note[data-shape="fita"]::before{ content: ''; position: absolute; top: -11px; left: 50%; width: 92px; height: 24px; transform: translateX(-50%) rotate(-3deg); background: hsl(45 30% 92% / .72); box-shadow: 0 1px 2px hsl(0 0% 0% / .12); border-left: 1px dashed hsl(0 0% 100% / .6); border-right: 1px dashed hsl(0 0% 100% / .6); pointer-events: none; }
+.pi-note[data-shape="fita"] .pi-text{ min-height: 150px; }
+.pi-note[data-shape="rasgado"]{ border-radius: 3px 3px 0 0; padding-bottom: 8px; -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/14px 7px repeat-x; mask: linear-gradient(#000 0 0) top/100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/14px 7px repeat-x; }
+.pi-note[data-shape="rasgado"] .pi-text{ min-height: 150px; }
+.pi-note[data-shape="rasgado"] .pi-rz{ display:none; }
+/* seletor de formato e cor */
+.pi-pick{ width: 300px; display:flex; flex-direction:column; gap: 8px; }
+.pi-pick-h{ font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.pi-shapes{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pi-shape-btn{ display:flex; flex-direction:column; align-items:center; gap: 5px; padding: 8px 4px 6px; border: 1px solid transparent; border-radius: 12px; background: hsl(0 0% 100% / .35); cursor:pointer; font-size: 11.5px; color: var(--ink-2); }
+.pi-shape-btn:hover{ background: hsl(0 0% 100% / .7); }
+.pi-shape-btn.on{ border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
+.pi-mini{ display:block; width: 40px; height: 36px; background: var(--pi-bg); border-top: 7px solid color-mix(in oklab, var(--pi-bd) 45%, var(--pi-bg)); box-shadow: 0 3px 6px -2px hsl(230 30% 20% / .35); border-radius: 2px 2px 7px 2px; position: relative; }
+.pi-mini[data-shape="retangulo"]{ width: 54px; height: 30px; }
+.pi-mini[data-shape="tira"]{ width: 26px; height: 42px; }
+.pi-mini[data-shape="redondo"]{ border-radius: 10px; }
+.pi-mini[data-shape="fita"]{ border-top-color: transparent; }
+.pi-mini[data-shape="fita"]::before{ content:''; position:absolute; top: -10px; left: 50%; width: 22px; height: 8px; transform: translateX(-50%) rotate(-4deg); background: hsl(45 30% 92% / .85); }
+.pi-mini[data-shape="rasgado"]{ -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/8px 4px repeat-x; mask: linear-gradient(#000 0 0) top/100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/8px 4px repeat-x; }
+.pi-mini.sm{ width: 18px; height: 16px; border-top-width: 4px; display:inline-block; vertical-align: middle; }
+.pi-colors{ display:flex; gap: 6px; flex-wrap: wrap; }
+.pi-pick-tip{ margin: 0; font-size: 11.5px; color: var(--ink-3); }
+.pi-menu{ display:flex; flex-direction:column; gap: 10px; }
+.pi-menu-foot{ display:flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--glass-line); padding-top: 8px; }
+.pi-from{ display:inline-flex; align-items:center; gap: 3px; border: 0; background: hsl(0 0% 100% / .55); border-radius: 99px; padding: 1px 7px 1px 5px; font-size: 10.5px; font-weight: 700; color: hsl(0 0% 20% / .7); cursor: pointer; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.pi-from svg{ width: 11px; height: 11px; }
