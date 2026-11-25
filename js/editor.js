@@ -460,6 +460,7 @@
         // 5. ferramentas
         const toolBtn = menuBtn('feather', 'Ferramentas', 'Onde parei, ditado e leitura em voz alta', () => [
           { label: 'Onde parei e marca-páginas…', desc: 'Volta ao ponto em que você escreveu por último', icon: 'bookmark', fn: () => bookmarkMenu(toolBtn) },
+          { label: 'Post-its ao lado', desc: 'Quadro de brainstorm aberto ao lado do texto', icon: 'sticky', fn: () => T.Shell.open({ kind: 'postits', ref: 'postits' }, { side: true }) },
           { head: 'Voz' },
           { label: dictOn ? 'Parar o ditado' : 'Ditar', desc: 'Fale e o texto aparece no cursor (diga “vírgula”, “ponto”…)', icon: 'voice', on: dictOn, fn: () => toggleDictation() },
           { label: reading ? 'Parar a leitura' : 'Ler em voz alta', icon: 'sound', fn: () => readAloud() },
