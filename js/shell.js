@@ -1413,12 +1413,25 @@
     const on = !Shell.el.classList.contains('focus');
     Shell.el.classList.toggle('focus', on);
     let exit = document.getElementById('focus-exit');
-    if (on && !exit) { exit = h('button.btn.glass.sm#focus-exit', { style: { position: 'fixed', bottom: '14px', left: '14px', zIndex: 30 }, onclick: () => T.emit('focus-mode') }, icon('focus'), 'Sair do foco (Esc)'); document.body.appendChild(exit); }
+    if (on && !exit) {
+      const pinned = S().prefs().focusTools !== false;
+      Shell.el.classList.toggle('pin-tools', pinned);
+      const tbtn = h('button.btn.glass.sm' + (pinned ? '.on' : ''), { type: 'button', title: 'Mostrar ou esconder a barra de ferramentas no modo foco', onclick: () => { const v = !Shell.el.classList.contains('pin-tools'); Shell.el.classList.toggle('pin-tools', v); tbtn.classList.toggle('on', v); tbtn.lastChild.textContent = v ? 'Esconder ferramentas' : 'Mostrar ferramentas'; S().setPrefs({ focusTools: v }); } }, icon('gear'), h('span', pinned ? 'Esconder ferramentas' : 'Mostrar ferramentas'));
+      exit = h('div#focus-exit', { style: { position: 'fixed', bottom: '14px', left: '14px', zIndex: 30, display: 'flex', gap: '8px' } },
+        h('button.btn.glass.sm', { type: 'button', onclick: () => T.emit('focus-mode') }, icon('focus'), 'Sair do foco (Esc)'), tbtn);
+      document.body.appendChild(exit);
+    }
+    if (!on) Shell.el.classList.remove('pin-tools');
     if (!on && exit) exit.remove();
     document.querySelector('.fabs')?.classList.toggle('hidden', on);
     setTimeout(() => Shell.placeHandles(), 30);
     T.emit('focus-changed', on);
   });
+  // modo foco com a barra escondida: chegar o mouse perto do topo mostra a barra
+  document.addEventListener('mousemove', (e) => {
+    if (!Shell.el || !Shell.el.classList.contains('focus') || Shell.el.classList.contains('pin-tools')) return;
+    Shell.el.querySelectorAll('.ed-tools').forEach(t => { const r = t.closest('.ed')?.getBoundingClientRect(); if (!r) return; const near = e.clientY - r.top < 80 && e.clientY >= r.top - 4; if (near) t.classList.add('peek'); else if (e.clientY - r.top > 150 && !t.contains(document.activeElement) && !document.querySelector('.menu, .popover')) t.classList.remove('peek'); });
+  }, { passive: true });
   document.addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
     if (!Shell.pid) return;

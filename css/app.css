@@ -2163,3 +2163,10 @@ body:has(.ed .ed-status) .fabs .fab{ padding: 10px 15px 10px 12px; font-size: 13
 .stg-done{ display:flex; align-items:center; gap: 4px; font-size: 12px; color: var(--ink-2); }
 .stg-n{ font-size: 11px; }
 .modal-foot .grow{ flex: 1; }
+
+/* modo foco: a barra de ferramentas continua ao alcance */
+.shell.focus.pin-tools .ed-tools{ opacity: 1 !important; transform: translateX(-50%) !important; z-index: 40; }
+.shell.focus:not(.pin-tools) .ed-tools{ opacity: 0; transform: translateX(-50%) translateY(-70%); }
+.shell.focus:not(.pin-tools) .ed-tools:hover, .shell.focus:not(.pin-tools) .ed-tools:focus-within, .shell.focus:not(.pin-tools) .ed-tools.peek{ opacity: 1; transform: translateX(-50%); }
+.shell.focus .ed-status{ z-index: 40; }
+#focus-exit .btn.on{ background: var(--accent-soft); color: var(--accent-ink); }
