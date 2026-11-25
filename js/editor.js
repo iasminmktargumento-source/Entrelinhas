@@ -1326,7 +1326,8 @@
             T.iconBtn('bold', 'Negrito', () => cmd('bold'), '.sm'),
             T.iconBtn('italic', 'Itálico', () => cmd('italic'), '.sm'),
             T.iconBtn('mark', 'Marca-texto (escolher a cor)', (e) => hlPalette(e.currentTarget), '.sm'),
-            h('button.btn.sm.syn-btn', { type: 'button', title: 'Sinônimos da palavra selecionada', onclick: () => showSynonyms() }, icon('replace'), 'Sinônimos'),
+            h('button.btn.sm.syn-btn', { type: 'button', title: 'Sinônimos da palavra selecionada', onclick: () => showSynonyms('syn') }, icon('replace'), 'Sinônimos'),
+            h('button.btn.sm.syn-btn', { type: 'button', title: 'O que a palavra significa, com exemplos de uso', onclick: () => showSynonyms('dict') }, icon('book'), 'Dicionário'),
             T.iconBtn('comment', 'Comentar', () => addComment(), '.sm'),
             T.iconBtn('bookmark', 'Marca-página nesta frase (Ctrl+Shift+B)', () => addMark(), '.sm'));
           selPop.addEventListener('mousedown', e => e.preventDefault());
@@ -1335,7 +1336,7 @@
         selPop.style.left = Math.max(8, Math.min(innerWidth - 300, r.left + r.width / 2 - 120)) + 'px';
         selPop.style.top = Math.max(8, r.top - 46) + 'px';
       }
-      function showSynonyms(){
+      function showSynonyms(tab){
         const sel = getSelection(); if (!sel.rangeCount) return;
         const range = sel.getRangeAt(0).cloneRange();
         const raw = sel.toString(); const word = raw.trim().replace(/^[\s“”"'«»(—–-]+|[\s“”"'«».,;:!?…)—–-]+$/g, '');
@@ -1351,7 +1352,7 @@
           document.execCommand('insertText', false, lead + out + tail);
           normalize(); save();
           if (!composeOn && mode === 'book') requestAnimationFrame(bookFollowCaret);
-        });
+        }, { tab });
       }
       function hideSelPop(){ if (selPop) { selPop.remove(); selPop = null; } }
       function sameBlock(range){
