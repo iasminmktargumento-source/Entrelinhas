@@ -95,7 +95,7 @@
   }
   // balãozinho "▶ ouvir" perto do nome
   let chip = null, chipT = 0;
-  function showChip(v, rect){
+  function showChip(v, rect, opts = {}){
     hideChip();
     const pid = T.Shell?.pid; const has = (v.clips || []).length;
     chip = h('div.vc-chip.glass.glass-strong', { role: 'dialog' },
@@ -107,7 +107,9 @@
     document.body.appendChild(chip);
     const cr = chip.getBoundingClientRect();
     chip.style.left = T.clamp(rect.left, 8, innerWidth - cr.width - 8) + 'px';
-    chip.style.top = (rect.top - cr.height - 8 > 8 ? rect.top - cr.height - 8 : rect.bottom + 8) + 'px';
+    // embaixo da seleção (em cima fica o balão de negrito, itálico…)
+    const below = rect.bottom + 10, above = rect.top - cr.height - 54;
+    chip.style.top = (opts.below ? (below + cr.height < innerHeight - 8 ? below : Math.max(8, above)) : (rect.top - cr.height - 8 > 8 ? rect.top - cr.height - 8 : below)) + 'px';
     clearTimeout(chipT); chipT = setTimeout(() => { if (chip && !chip.matches(':hover')) hideChip(); }, 6000);
     chip.addEventListener('mouseleave', () => { clearTimeout(chipT); chipT = setTimeout(hideChip, 1500); });
   }

@@ -1946,13 +1946,12 @@
       const VCH = (window.CSS && CSS.highlights && window.Highlight) ? new Highlight() : null;
       const drawVoices = () => { if (!VCH || destroyed || !T.Voices) return; VCH.clear(); T.Voices.ranges(item.pid, prose).forEach(r => VCH.add(r)); CSS.highlights.set('vc-name', VCH); };
       const drawVoicesSoon = T.debounce(drawVoices, 700);
-      prose.addEventListener('input', drawVoicesSoon);
-      setTimeout(drawVoices, 700);
-      const offVoices = T.on('voices-changed', (e) => { if (e?.pid === item.pid) drawVoices(); });
+      // (sem sublinhado nos nomes: o painel de ouvir só aparece quando você seleciona o nome)
+      const offVoices = () => {};
       prose.addEventListener('mouseup', () => setTimeout(() => {
         if (!T.Voices || destroyed) return; const sl = getSelection(); if (!sl.rangeCount || !prose.contains(sl.anchorNode)) return;
-        if (sl.isCollapsed) { const hit = T.Voices.voiceAtPoint(item.pid, sl.anchorNode, sl.anchorOffset); if (hit && (hit.v.clips || []).length) T.Voices.showChip(hit.v, hit.range.getBoundingClientRect()); }
-        else { const vv = T.Voices.voiceFor(item.pid, sl.toString()); if (vv) T.Voices.showChip(vv, sl.getRangeAt(0).getBoundingClientRect()); }
+        if (sl.isCollapsed) return;
+        const vv = T.Voices.voiceFor(item.pid, sl.toString()); if (vv) T.Voices.showChip(vv, sl.getRangeAt(0).getBoundingClientRect(), { below: true });
       }, 10));
       setTimeout(() => { drawMarks(); const pm = T.pendingMark; if (pm && pm.doc === item.id && Date.now() - (pm.ts || 0) < 6000) { const m = (S().get(item.id)?.meta?.marks || []).find(x => x.id === pm.id); if (m) setTimeout(() => { if (!destroyed && ed.isConnected) goMark(m, 'Seu último marca-página: “' + m.name + '”'); }, 350); } }, 600);
       setTimeout(() => protectDict(true), 400);
