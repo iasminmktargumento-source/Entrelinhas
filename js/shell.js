@@ -26,7 +26,7 @@
   /* ================= TELA INICIAL ================= */
   Shell.home = async function(){
     Shell.teardown();
-    Shell.pid = null; Shell.applyTheme(); Shell.applyWalls();
+    Shell.pid = null; Shell.applyTheme(); Shell.applyWalls(); try { T.Postits && T.Postits.render(); } catch (e) {}
     const root = app(); root.innerHTML = '';
     const projects = (await S().loadProjects()).sort((a, b) => (b.meta?.opened || b.updated) - (a.meta?.opened || a.updated));
     const showArch = Shell._showArchived;
@@ -1217,7 +1217,8 @@
       : h('button.fab.glass.glass-strong.fd-item', { type: 'button', title: 'Começar um sprint de escrita', onclick: (e) => sprintMenu(e.currentTarget) }, icon('clock'), h('span', 'Sprint'));
     const bd = T.Buddy && T.Buddy.prefs && T.Buddy.prefs();
     const buddy = bd && Shell.pid ? h('button.fab.glass.glass-strong.fd-item.fd-buddy' + (T.Buddy.isOpen() ? '.on' : ''), { type: 'button', title: (T.Buddy.isOpen() ? 'Guardar o ' : 'Chamar o ') + bd.name + ' · ' + T.fmt(bd.coins || 0) + ' moedas', onclick: () => { T.Buddy.toggle(); } }, h('i.bd-coin'), h('span.num', T.fmt(bd.coins || 0)), h('span.fd-bname', bd.name)) : null;
-    fabs.prepend(...[inFocus ? sp : null, buddy].filter(Boolean));
+    const pis = Shell.pid && T.Postits ? h('button.fab.glass.glass-strong.fd-item.fd-postit', { type: 'button', title: 'Post-it ao lado do texto (escolha o tipo)', onclick: (e) => T.Postits.menu(e.currentTarget) }, icon('sticky'), h('span', 'Post-it')) : null;
+    fabs.prepend(...[inFocus ? sp : null, buddy, pis].filter(Boolean));
   };
   function sprintPill(){
     const s = Shell.sprint; const left = s.min * 60000 - spElapsed(s);

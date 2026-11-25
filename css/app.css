@@ -2215,3 +2215,15 @@ body:has(.ed .ed-status) .bd-win{ bottom: 126px; }
 .pi-more:hover{ background: hsl(0 0% 100% / .85); }
 .pi-rz{ position:absolute; right: 0; bottom: 0; width: 14px; height: 14px; cursor: ew-resize; background: linear-gradient(135deg, transparent 50%, color-mix(in oklab, var(--pi-bd) 70%, transparent) 50%); border-radius: 0 0 14px 0; opacity: 0; }
 .pi-note:hover .pi-rz{ opacity: 1; }
+
+/* post-its presos na tela */
+#pi-layer{ position: fixed; inset: 0; pointer-events: none; z-index: 55; }
+#pi-layer.hide{ display:none; }
+#pi-layer .pi-note{ pointer-events: auto; position: fixed; transform: rotate(-.5deg); }
+#pi-layer .pi-note.editing, #pi-layer .pi-note.drag{ transform: none; }
+#pi-layer .pi-note.mini .pi-text, #pi-layer .pi-note.mini .pi-more, #pi-layer .pi-note.mini .pi-rz{ display:none; }
+#pi-layer .pi-note.mini{ border-radius: 4px 4px 10px 4px; }
+.pi-type{ display:inline-flex; align-items:center; gap: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in oklab, var(--pi-bd) 55%, #222); white-space: nowrap; }
+.pi-type svg{ width: 12px; height: 12px; }
+.pi-board .pi-type{ margin-right: 4px; }
+body.typing #pi-layer .pi-note:not(.editing){ opacity: .85; }
