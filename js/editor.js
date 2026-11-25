@@ -660,7 +660,22 @@
         const P = panPx(); ed.style.setProperty('--pan', P + 'px');
         const off = (S().prefs().pan || {})[mode] || 0;
         panBusy = true; el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2 + off); requestAnimationFrame(() => { panBusy = false; });
-        if (!el._panOn) { el._panOn = true; el.addEventListener('scroll', () => { if (panBusy) return; savePan(); updatePanBtn(); }, { passive: true }); }
+        if (!el._panOn) {
+          el._panOn = true; el._userPan = 0; el._lastLeft = el.scrollLeft;
+          const mark = () => { el._userPan = Date.now(); };
+          el.addEventListener('wheel', (e) => { if (!e.ctrlKey && !e.metaKey) mark(); }, { passive: true });
+          el.addEventListener('touchstart', mark, { passive: true });
+          el.addEventListener('keydown', (e) => { if (e.target === el) mark(); });
+          el.addEventListener('scroll', () => {
+            if (panBusy) { el._lastLeft = el.scrollLeft; return; }
+            // rolagem que você não pediu (o navegador seguindo o cursor ao digitar): desfaz e deixa a página onde você colocou
+            if (Date.now() - el._userPan > 700 && !el._userDrag) { panBusy = true; el.scrollLeft = el._lastLeft; requestAnimationFrame(() => { panBusy = false; }); return; }
+            el._lastLeft = el.scrollLeft; savePan(); updatePanBtn();
+          }, { passive: true });
+          // arrastar a barra de rolagem também conta como sua escolha
+          el.addEventListener('pointerdown', (e) => { if (e.target !== el) return; el._userDrag = true; const up = () => { el._userDrag = false; el._userPan = Date.now(); removeEventListener('pointerup', up); }; addEventListener('pointerup', up); });
+        }
+        el._lastLeft = el.scrollLeft;
         updatePanBtn();
       }
       const savePan = T.debounce(() => { const el = panEl(); if (!el || destroyed) return; const off = Math.round(el.scrollLeft - (el.scrollWidth - el.clientWidth) / 2); const all = Object.assign({}, S().prefs().pan); all[mode] = Math.abs(off) < 4 ? 0 : off; S().setPrefs({ pan: all }); }, 400);
@@ -1206,11 +1221,19 @@
           if (kind) T.Sound.type(kit, kind);
         }
         if (mode === 'book' && !composeOn && (e.key === 'PageDown' || e.key === 'PageUp')) { e.preventDefault(); (e.key === 'PageDown' ? bookEls?.next : bookEls?.prev)?.click(); }
-        if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '0')) {
-          e.preventDefault(); const m = composeOn ? 'compose' : mode; const z = view(m).zoom;
-          setView(m, { zoom: e.key === '0' ? 100 : T.clamp(z + (e.key === '-' ? -10 : 10), 50, 220) });
-        }
       });
+      // zoom do texto (Ctrl + / Ctrl − / Ctrl 0 e Ctrl + rodinha): aumenta a página/o livro, não a tela inteira do navegador
+      const edActive = () => !destroyed && ed.isConnected && ed.offsetParent !== null && (document.querySelectorAll('.ed').length === 1 || ed.closest('.pane')?.classList.contains('focused') || ed.contains(document.activeElement));
+      const zoomBy = (d) => { const m = composeOn ? 'compose' : mode; const z = view(m).zoom; setView(m, { zoom: d === 0 ? 100 : T.clamp(z + d, 50, 220) }); T.toast('Zoom ' + view(m).zoom + '%', { ms: 900 }); };
+      const onZoomKey = (e) => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey || !edActive()) return;
+        const k = e.key, c = e.code;
+        const d = (k === '=' || k === '+' || c === 'NumpadAdd' || c === 'Equal') ? 10 : (k === '-' || c === 'NumpadSubtract' || c === 'Minus') ? -10 : (k === '0' || c === 'Digit0' || c === 'Numpad0') ? 0 : null;
+        if (d === null) return; e.preventDefault(); e.stopPropagation(); zoomBy(d);
+      };
+      document.addEventListener('keydown', onZoomKey, true);
+      const onZoomWheel = (e) => { if (!(e.ctrlKey || e.metaKey) || !ed.contains(e.target) || !edActive()) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 10 : -10); };
+      ed.addEventListener('wheel', onZoomWheel, { passive: false });
       prose.addEventListener('input', () => {
         normalize(); save();
         if (!composeOn && mode === 'tw') requestAnimationFrame(twFollow);
@@ -1882,7 +1905,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };
