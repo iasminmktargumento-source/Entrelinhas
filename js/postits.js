@@ -67,7 +67,7 @@
             h('span.pi-dots'),
             h('span.pi-type', colorOf(n.meta?.color)[3]),
             h('button.pi-ic', { type: 'button', title: 'Tipo e cor', onclick: (e) => { e.stopPropagation(); T.menuAt(e.currentTarget, COLORS.map(([k, b2, d2, tn]) => ({ label: tn, on: k === cname, icon: 'dot', color: d2, fn: () => { S().update(n.id, { meta: { color: k } }); draw(); } }))); } }, icon('dot')),
-            h('button.pi-ic', { type: 'button', title: 'Prender na tela (fica ao lado do texto enquanto você escreve)', onclick: (e) => { e.stopPropagation(); S().update(n.id, { meta: { float: true, fx: Math.max(20, innerWidth - 300), fy: 140 } }); draw(); T.Postits.render(); T.toast('Post-it preso na tela, ao lado do texto.'); } }, icon('pin')),
+            h('button.pi-ic', { type: 'button', title: 'Prender na tela (fica ao lado do texto enquanto você escreve)', onclick: (e) => { e.stopPropagation(); const hh = hostNow(); if (hh) S().update(n.id, { meta: { float: true, anchor: hh.doc, px: Math.round(hh.el.offsetWidth + 18), py: 80 } }); else S().update(n.id, { meta: { float: true, fx: Math.max(20, innerWidth - 300), fy: 140 } }); draw(); renderAll(); T.toast(hh ? 'Post-it colado na página do capítulo aberto.' : 'Post-it preso na tela.'); } }, icon('pin')),
             h('button.pi-ic', { type: 'button', title: 'Apagar post-it', onclick: async (e) => { e.stopPropagation(); if (!(text.textContent || '').trim() || await T.confirm('Apagar este post-it?', (text.textContent || '').slice(0, 80), 'Apagar', true)) { S().remove(n.id); draw(); } } }, icon('x'))),
           text, more);
         // ver mais / ver menos
@@ -134,20 +134,22 @@
   /* ----- post-its presos na tela (ficam parados enquanto o texto rola) ----- */
   let layer = null;
   const floats = (pid) => S().all(pid).filter(i => i.type === 'postit' && i.meta?.float);
-  function floatNote(n){
+  function floatNote(n, host){
     const [cname, bg, bd, tname, tic] = colorOf(n.meta?.color);
     const text = h('div.pi-text', { contenteditable: 'true', spellcheck: 'true', lang: 'pt-BR', 'data-ph': 'Escreva…' }); text.textContent = n.body || '';
     const more = h('button.pi-more', { type: 'button' });
     let mini = !!n.meta?.mini, open = !!n.meta?.open;
-    const clampXY = (x, y, w) => [T.clamp(x, 4, innerWidth - Math.min(w, 120)), T.clamp(y, 4, innerHeight - 34)];
-    const w = n.meta?.w || 240; const [x0, y0] = clampXY(n.meta?.fx ?? innerWidth - 300, n.meta?.fy ?? 140, w);
-    const el = h('div.pi-note.pi-float' + (mini ? '.mini' : ''), { 'data-id': n.id, style: { left: x0 + 'px', top: y0 + 'px', width: w + 'px', '--pi-bg': bg, '--pi-bd': bd, zIndex: 55 + (n.meta?.z || 0) % 20 } },
+    const zOf = () => host ? (host.getBoundingClientRect().width / (host.offsetWidth || 1)) || 1 : 1;
+    const clampXY = (x, y, w) => host ? [T.clamp(x, -Math.min(w, 600), host.offsetWidth + 600 - Math.min(w, 120)), Math.max(-20, y)] : [T.clamp(x, 4, innerWidth - Math.min(w, 120)), T.clamp(y, 4, innerHeight - 34)];
+    const w = n.meta?.w || 240; const [x0, y0] = host ? clampXY(n.meta?.px ?? 0, n.meta?.py ?? 0, w) : clampXY(n.meta?.fx ?? innerWidth - 300, n.meta?.fy ?? 140, w);
+    const el = h('div.pi-note.pi-float' + (mini ? '.mini' : '') + (host ? '.glued' : ''), { 'data-id': n.id, style: { left: x0 + 'px', top: y0 + 'px', width: w + 'px', '--pi-bg': bg, '--pi-bd': bd, zIndex: 55 + (n.meta?.z || 0) % 20 } },
       h('div.pi-grip', { title: 'Arraste para mover' },
         h('span.pi-type', icon(tic), tname), h('span.pi-dots'),
-        h('button.pi-ic', { type: 'button', title: 'Tipo', onclick: (e) => { e.stopPropagation(); T.menuAt(e.currentTarget, COLORS.map(([k, b2, d2, tn]) => ({ label: tn, on: k === cname, icon: 'dot', color: d2, fn: () => { S().update(n.id, { meta: { color: k } }); render(); } }))); } }, icon('dot')),
+        h('button.pi-ic', { type: 'button', title: 'Tipo', onclick: (e) => { e.stopPropagation(); T.menuAt(e.currentTarget, COLORS.map(([k, b2, d2, tn]) => ({ label: tn, on: k === cname, icon: 'dot', color: d2, fn: () => { S().update(n.id, { meta: { color: k } }); renderAll(); } }))); } }, icon('dot')),
         h('button.pi-ic', { type: 'button', title: mini ? 'Abrir' : 'Encolher', onclick: (e) => { e.stopPropagation(); mini = !mini; el.classList.toggle('mini', mini); S().update(n.id, { meta: { mini } }, { silent: true }); e.currentTarget.replaceChildren(icon(mini ? 'down' : 'up')); fit(); } }, icon(mini ? 'down' : 'up')),
-        h('button.pi-ic', { type: 'button', title: 'Mandar para o quadro de post-its', onclick: (e) => { e.stopPropagation(); S().update(n.id, { meta: { float: false } }); render(); T.toast('Post-it foi para o quadro.'); } }, icon('grid')),
-        h('button.pi-ic', { type: 'button', title: 'Apagar', onclick: async (e) => { e.stopPropagation(); if (!(text.textContent || '').trim() || await T.confirm('Apagar este post-it?', (text.textContent || '').slice(0, 80), 'Apagar', true)) { S().remove(n.id); render(); } } }, icon('x'))),
+        h('button.pi-ic', { type: 'button', title: host ? 'Descolar da página (fica parado na tela)' : 'Colar nesta página (rola junto com o texto)', onclick: (e) => { e.stopPropagation(); if (host) { const r = el.getBoundingClientRect(); S().update(n.id, { meta: { anchor: null, fx: Math.round(r.left), fy: Math.round(r.top) } }); } else { const hh = hostNow(); if (!hh) { T.toast('Abra um capítulo para colar o post-it nele.'); return; } const r = el.getBoundingClientRect(), hr = hh.el.getBoundingClientRect(), z = (hr.width / (hh.el.offsetWidth || 1)) || 1; S().update(n.id, { meta: { anchor: hh.doc, px: Math.round((r.left - hr.left) / z), py: Math.round((r.top - hr.top) / z) } }); } renderAll(); } }, icon(host ? 'pop' : 'pin')),
+        h('button.pi-ic', { type: 'button', title: 'Mandar para o quadro de post-its', onclick: (e) => { e.stopPropagation(); S().update(n.id, { meta: { float: false, anchor: null } }); renderAll(); T.toast('Post-it foi para o quadro.'); } }, icon('grid')),
+        h('button.pi-ic', { type: 'button', title: 'Apagar', onclick: async (e) => { e.stopPropagation(); if (!(text.textContent || '').trim() || await T.confirm('Apagar este post-it?', (text.textContent || '').slice(0, 80), 'Apagar', true)) { S().remove(n.id); renderAll(); } } }, icon('x'))),
       text, more);
     const fit = () => {
       const editing = document.activeElement === text;
@@ -155,7 +157,7 @@
       if (long && !editing && !open) { text.style.maxHeight = CLAMP + 'px'; el.classList.add('clamped'); } else el.classList.remove('clamped');
       more.hidden = mini || !long || editing; more.textContent = open ? 'Ver menos ▴' : 'Ver mais ▾';
       // nunca passa do fim da tela: se crescer demais, rola por dentro
-      const top = el.getBoundingClientRect().top; text.style.maxHeight = el.classList.contains('clamped') ? CLAMP + 'px' : Math.max(120, innerHeight - top - 70) + 'px'; text.style.overflowY = el.classList.contains('clamped') ? 'hidden' : 'auto';
+      if (host) { text.style.maxHeight = el.classList.contains('clamped') ? CLAMP + 'px' : ''; text.style.overflowY = 'hidden'; } else { const top = el.getBoundingClientRect().top; text.style.maxHeight = el.classList.contains('clamped') ? CLAMP + 'px' : Math.max(120, innerHeight - top - 70) + 'px'; text.style.overflowY = el.classList.contains('clamped') ? 'hidden' : 'auto'; }
     };
     more.onclick = (e) => { e.stopPropagation(); open = !open; S().update(n.id, { meta: { open } }, { silent: true }); fit(); };
     text.addEventListener('focus', () => { el.classList.add('editing'); fit(); });
@@ -165,9 +167,9 @@
     text.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') text.blur(); });
     el.querySelector('.pi-grip').addEventListener('pointerdown', (e) => {
       if (e.target.closest('button')) return; e.preventDefault();
-      const r = el.getBoundingClientRect(); const ox = e.clientX - r.left, oy = e.clientY - r.top; el.classList.add('drag');
-      const mv = (ev) => { const [x, y] = clampXY(ev.clientX - ox, ev.clientY - oy, el.offsetWidth); el.style.left = x + 'px'; el.style.top = y + 'px'; };
-      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); el.classList.remove('drag'); const rr = el.getBoundingClientRect(); S().update(n.id, { meta: { fx: Math.round(rr.left), fy: Math.round(rr.top) } }, { silent: true }); fit(); };
+      const r = el.getBoundingClientRect(); const ox = e.clientX - r.left, oy = e.clientY - r.top; el.classList.add('drag'); const z = zOf();
+      const mv = (ev) => { if (host) { const hr = host.getBoundingClientRect(); const [x, y] = clampXY((ev.clientX - ox - hr.left) / z, (ev.clientY - oy - hr.top) / z, el.offsetWidth); el.style.left = x + 'px'; el.style.top = y + 'px'; } else { const [x, y] = clampXY(ev.clientX - ox, ev.clientY - oy, el.offsetWidth); el.style.left = x + 'px'; el.style.top = y + 'px'; } };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); el.classList.remove('drag'); if (host) S().update(n.id, { meta: { px: Math.round(parseFloat(el.style.left)), py: Math.round(parseFloat(el.style.top)) } }, { silent: true }); else { const rr = el.getBoundingClientRect(); S().update(n.id, { meta: { fx: Math.round(rr.left), fy: Math.round(rr.top) } }, { silent: true }); } fit(); };
       addEventListener('pointermove', mv); addEventListener('pointerup', up);
     });
     const rz = h('span.pi-rz', { title: 'Arraste para mudar a largura' }); el.appendChild(rz);
@@ -178,30 +180,57 @@
     requestAnimationFrame(fit);
     return el;
   }
+  const hosts = new Map(); // elemento da página → id do capítulo
+  const hostNow = () => { const all = [...hosts.entries()].filter(([el]) => el.isConnected); if (!all.length) return null; const f = all.find(([el]) => el.closest('.pane')?.classList.contains('focused')) || all[0]; return { el: f[0], doc: f[1] }; };
   function render(){
     const pid = T.Shell?.pid;
     if (!pid) { if (layer) layer.replaceChildren(); return; }
     if (!layer) { layer = h('div#pi-layer'); document.body.appendChild(layer); }
     const focusId = document.activeElement?.closest?.('.pi-float')?.dataset.id;
-    layer.replaceChildren(...floats(pid).map(floatNote));
+    const docsOpen = new Set([...hosts.entries()].filter(([el]) => el.isConnected).map(([, d]) => d));
+    layer.replaceChildren(...floats(pid).filter(n => !n.meta?.anchor).map(n => floatNote(n)));
+    // colados num capítulo que não está aberto: não aparecem na tela
+    void docsOpen;
     if (focusId) layer.querySelector('[data-id="' + focusId + '"] .pi-text')?.focus();
   }
+  function renderHost(el, doc){
+    let lay = el.querySelector(':scope > .pi-glue'); if (!lay) { lay = h('div.pi-glue'); el.appendChild(lay); }
+    const focusId = document.activeElement?.closest?.('.pi-float')?.dataset.id;
+    const pid = T.Shell?.pid; lay.replaceChildren(...(pid ? floats(pid).filter(n => n.meta?.anchor === doc).map(n => floatNote(n, el)) : []));
+    if (focusId) lay.querySelector('[data-id="' + focusId + '"] .pi-text')?.focus();
+  }
+  function renderAll(){ render(); for (const [el, doc] of hosts) { if (el.isConnected) renderHost(el, doc); else hosts.delete(el); } }
+  function attach(el, doc){
+    hosts.set(el, doc); el.classList.add('pi-host');
+    // post-its antigos (soltos na tela, de antes de existir "colar"): colam nesta página, no mesmo lugar em que estavam
+    const pid = T.Shell?.pid; if (pid) { const old = floats(pid).filter(n => n.meta?.anchor === undefined); if (old.length) requestAnimationFrame(() => { const hr = el.getBoundingClientRect(); const z = (hr.width / (el.offsetWidth || 1)) || 1; old.forEach(n => S().update(n.id, { meta: { anchor: doc, px: Math.round(((n.meta?.fx ?? innerWidth - 300) - hr.left) / z), py: Math.round(((n.meta?.fy ?? 140) - hr.top) / z) } }, { silent: true })); renderAll(); }); }
+    renderHost(el, doc);
+  }
+  function detach(el){ hosts.delete(el); }
   function addFloat(color){
     const pid = T.Shell?.pid; if (!pid) return;
-    const fs = floats(pid); const ed = document.querySelector('.pane.focused .ed, .ed');
-    const er = ed ? ed.getBoundingClientRect() : { right: innerWidth - 20, top: 120 };
-    const x = Math.min(innerWidth - 270, er.right - 290), y = Math.min(innerHeight - 220, (er.top || 100) + 70 + (fs.length % 6) * 36);
-    const n = S().create({ pid, type: 'postit', area: 'brainstorm', parent: null, title: '', body: '', order: Date.now(), meta: { float: true, fx: Math.round(x - (fs.length % 6) * 14), fy: Math.round(y), color, w: 240, z: fs.length } });
-    render(); setTimeout(() => layer?.querySelector('[data-id="' + n.id + '"] .pi-text')?.focus(), 30);
+    const fs = floats(pid); const hh = hostNow(); let meta;
+    if (hh) {
+      const hr = hh.el.getBoundingClientRect(); const z = (hr.width / (hh.el.offsetWidth || 1)) || 1; const W = hh.el.offsetWidth;
+      const room = innerWidth - hr.right; const px = room > 270 * z ? W + 18 : W - 262;
+      const near = fs.filter(n => n.meta?.anchor === hh.doc).length;
+      const py = Math.max(10, (Math.max(hr.top, 110) - hr.top) / z + 60 + (near % 5) * 40);
+      meta = { float: true, anchor: hh.doc, px: Math.round(px), py: Math.round(py), color, w: 240, z: fs.length };
+    } else {
+      const x = innerWidth - 300, y = Math.min(innerHeight - 220, 170 + (fs.length % 6) * 36);
+      meta = { float: true, fx: Math.round(x - (fs.length % 6) * 14), fy: Math.round(y), color, w: 240, z: fs.length };
+    }
+    const n = S().create({ pid, type: 'postit', area: 'brainstorm', parent: null, title: '', body: '', order: Date.now(), meta });
+    renderAll(); setTimeout(() => document.querySelector('.pi-float[data-id="' + n.id + '"] .pi-text')?.focus(), 30);
   }
   function menu(btn){
     const pid = T.Shell?.pid; const fs = pid ? floats(pid) : [];
     T.menuAt(btn, [{ head: 'Novo post-it ao lado do texto' }, ...COLORS.map(([k, , bd, tn, ic]) => ({ label: tn, icon: ic, color: bd, fn: () => addFloat(k) })),
-      '-', fs.length ? { label: (layer && layer.classList.contains('hide') ? 'Mostrar' : 'Esconder') + ' os post-its da tela (' + fs.length + ')', icon: 'eye', fn: () => { layer.classList.toggle('hide'); } } : null,
+      '-', fs.length ? { label: (layer && layer.classList.contains('hide') ? 'Mostrar' : 'Esconder') + ' os post-its da tela (' + fs.length + ')', icon: 'eye', fn: () => { layer.classList.toggle('hide'); document.body.classList.toggle('pi-hidden', layer.classList.contains('hide')); } } : null,
       { label: 'Abrir o quadro de post-its', icon: 'grid', fn: () => T.Shell.open({ kind: 'postits', ref: 'postits' }) }]);
   }
-  T.Postits = { render, addFloat, menu, COLORS };
-  T.on('items', (ev) => { if (ev?.item?.type === 'postit' && !(layer && layer.contains(document.activeElement))) render(); });
-  T.on('project-opened', () => render());
+  T.Postits = { render: renderAll, addFloat, menu, COLORS, attach, detach };
+  T.on('items', (ev) => { if (ev?.item?.type === 'postit' && !document.activeElement?.closest?.('.pi-float')) renderAll(); });
+  T.on('project-opened', () => renderAll());
   addEventListener('resize', T.debounce(() => render(), 200));
 })();

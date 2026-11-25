@@ -2227,3 +2227,12 @@ body:has(.ed .ed-status) .bd-win{ bottom: 126px; }
 .pi-type svg{ width: 12px; height: 12px; }
 .pi-board .pi-type{ margin-right: 4px; }
 body.typing #pi-layer .pi-note:not(.editing){ opacity: .85; }
+
+/* post-it colado na página: rola junto com o texto */
+.pi-host{ position: relative; }
+.pi-glue{ position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.pi-glue .pi-note{ pointer-events: auto; position: absolute; transform: rotate(-.6deg); }
+.pi-glue .pi-note.editing, .pi-glue .pi-note.drag{ transform: none; z-index: 9; }
+.pi-glue .pi-note.mini .pi-text, .pi-glue .pi-note.mini .pi-more, .pi-glue .pi-note.mini .pi-rz{ display:none; }
+body.pi-hidden .pi-glue{ display:none; }
+.mode-normal .pan, .mode-tw .pan{ overflow: visible; }

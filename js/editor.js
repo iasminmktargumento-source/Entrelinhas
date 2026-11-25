@@ -644,7 +644,9 @@
         setTimeout(reveal, 40); setTimeout(() => { if (mode === 'book' && keep) bookFollowCaret(); }, 400);
       }
       let twEls = null, bookEls = null, resizeObs = null;
+      let piHost = null;
       function applyMode(){
+        if (piHost) { T.Postits?.detach(piHost); piHost = null; }
         ed.className = 'ed mode-' + mode;
         scroll.innerHTML = ''; scroll.onscroll = null;
         if (twEls) { twEls.forEach(e => e.remove()); twEls = null; }
@@ -667,6 +669,7 @@
         }
         applyView(); buildTools(); updateStatus(); updateRail();
         requestAnimationFrame(() => setupPan());
+        if (!composeOn && T.Postits) { piHost = mode === 'book' ? bookEls?.spreadEl : prose.parentElement; if (piHost) T.Postits.attach(piHost, item.id); }
         applyBg(); setTimeout(marksSoon, 60); setTimeout(drawOutline, 80);
       }
       /* ----- rolagem horizontal: a página pode sair do centro ----- */
@@ -1925,7 +1928,7 @@
       document.fonts && document.fonts.ready.then(() => { if (mode === 'book') layoutBook(); if (mode === 'tw') twFollow(); });
 
       return {
-        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
+        destroy(){ destroyed = true; save.flush(); docs.forEach(d => { const x = S().get(d.id); if (x) T.Versions.auto(item.pid, d.id, x.body || '', true); }); offView(); toolsObs.disconnect(); offHover(); closeAC(); offEnt(); T.Ent.undecorate(prose); document.removeEventListener('selectionchange', onSel); document.removeEventListener('keydown', onZoomKey, true); document.removeEventListener('mousemove', clearTyping); offItems(); offFind(); resizeObs && resizeObs.disconnect(); hideSelPop(); if (reading) T.Narr.stop(); if (rail) rail.destroy(); if (fb) fb.close(); try { if (dictOn) { if (dict) dict.stop().catch(() => {}); if (dictRec) dictRec.stop(); } } catch (e) {} dictPartial(''); if (HLN) ['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5', 'an-weak'].forEach(k => CSS.highlights.delete(k)); if (anPanel) anPanel.remove(); offFocus(); offTargets(); offFmt(); offDict(); if (piHost) T.Postits?.detach(piHost); offBgItems(); if (bgStop) bgStop(); if (bgLayStop) bgLayStop(); },
         flush(){ save.flush(); },
         focus(){ prose.focus(); },
       };
