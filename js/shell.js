@@ -304,6 +304,7 @@
   /* ---------- barra de cima ---------- */
   let saveDot = null;
   Shell.renderTop = function(){
+    try { Shell.renderFocusDock && Shell.renderFocusDock(); } catch (e) {}
     if (!Shell.sprint && Shell.pid) Shell.restoreSprint();
     const p = S().get(Shell.pid); const top = Shell.topEl; top.innerHTML = '';
     const n = Shell.layout ? Shell.layout.n : 1;
@@ -1200,6 +1201,21 @@
     else { const p = s.pauses[s.pauses.length - 1]; if (p && !p.end) p.end = Date.now(); s.runAt = Date.now(); T.toast('Sprint retomado.'); }
     spSave(); Shell.renderTop();
   }
+  // no modo foco: Sprint e o companheiro ficam junto do Tesauro e da Ideia, no canto de baixo
+  Shell.renderFocusDock = function(){
+    const fabs = document.querySelector('.fabs'); if (!fabs) return;
+    fabs.querySelectorAll('.fd-item').forEach(x => x.remove());
+    if (!Shell.el || !Shell.el.classList.contains('focus')) return;
+    const s = Shell.sprint;
+    const sp = s ? h('span.fab.fd-item.fd-sprint' + (s.runAt ? '' : '.paused'),
+        T.iconBtn(s.runAt ? 'pause' : 'play', s.runAt ? 'Pausar sprint' : 'Continuar sprint', pauseSprint, '.sm'),
+        h('button.fd-sp-btn', { type: 'button', title: 'Ver como está indo', onclick: (e) => sprintLive(e.currentTarget) }, h('span.num.fd-sp-time', fmtLeft(s.min * 60000 - spElapsed(s))), h('span.fd-sp-words.sp-w', '+' + T.fmt(spWords(s)))),
+        T.iconBtn('stop', 'Encerrar sprint', () => endSprint(true), '.sm'))
+      : h('button.fab.fd-item', { type: 'button', title: 'Começar um sprint de escrita', onclick: (e) => sprintMenu(e.currentTarget) }, icon('clock'), h('span', 'Sprint'));
+    const bd = T.Buddy && T.Buddy.prefs && T.Buddy.prefs();
+    const buddy = bd ? h('button.fab.fd-item' + (T.Buddy.isOpen() ? '.on' : ''), { type: 'button', title: T.Buddy.isOpen() ? 'Guardar o ' + bd.name : 'Chamar o ' + bd.name, onclick: () => { T.Buddy.toggle(); setTimeout(Shell.renderFocusDock, 50); } }, icon('spark'), h('span', bd.name)) : null;
+    fabs.prepend(...[sp, buddy].filter(Boolean));
+  };
   function sprintPill(){
     const s = Shell.sprint; const left = s.min * 60000 - spElapsed(s);
     return h('span.sprint-pill' + (s.runAt ? '' : '.paused'),
@@ -1239,8 +1255,8 @@
   }
   function tickSprint(){
     const s = Shell.sprint; if (!s) return;
-    const el = document.getElementById('sprint-time'); if (el) el.textContent = fmtLeft(s.min * 60000 - spElapsed(s));
-    const wl = document.getElementById('sprint-words'); if (wl) wl.textContent = '+' + T.fmt(spWords(s));
+    document.querySelectorAll('#sprint-time, .fd-sp-time').forEach(el => { el.textContent = fmtLeft(s.min * 60000 - spElapsed(s)); });
+    document.querySelectorAll('#sprint-words, .fd-sp-words').forEach(wl => { wl.textContent = '+' + T.fmt(spWords(s)); });
     if (s.runAt) { const e = spElapsed(s); const last = s.samples[s.samples.length - 1]; if (e - last.e >= 20000) { s.samples.push({ e, w: spWords(s) }); if (s.samples.length > 400) s.samples.splice(1, 1); spSave(); } }
     if (spElapsed(s) >= s.min * 60000) endSprint(false);
   }
@@ -1423,7 +1439,7 @@
     }
     if (!on) Shell.el.classList.remove('pin-tools');
     if (!on && exit) exit.remove();
-    document.querySelector('.fabs')?.classList.toggle('hidden', on);
+    document.querySelector('.fabs')?.classList.remove('hidden'); document.body.classList.toggle('in-focus', on); Shell.renderFocusDock();
     setTimeout(() => Shell.placeHandles(), 30);
     T.emit('focus-changed', on);
   });

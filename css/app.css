@@ -2170,3 +2170,12 @@ body:has(.ed .ed-status) .fabs .fab{ padding: 10px 15px 10px 12px; font-size: 13
 .shell.focus:not(.pin-tools) .ed-tools:hover, .shell.focus:not(.pin-tools) .ed-tools:focus-within, .shell.focus:not(.pin-tools) .ed-tools.peek{ opacity: 1; transform: translateX(-50%); }
 .shell.focus .ed-status{ z-index: 40; }
 #focus-exit .btn.on{ background: var(--accent-soft); color: var(--accent-ink); }
+
+/* modo foco: Sprint e companheiro junto do Tesauro e da Ideia */
+body.in-focus .fabs{ z-index: 60; }
+body.in-focus .bd-win{ z-index: 80; }
+.fabs .fd-sprint{ display:inline-flex; align-items:center; gap: 4px; padding: 4px 6px; }
+.fabs .fd-sprint .fd-sp-btn{ display:inline-flex; align-items:baseline; gap: 6px; border:0; background: transparent; cursor:pointer; font-weight: 800; color: var(--ink); font-size: 14px; }
+.fabs .fd-sprint.paused{ opacity: .8; }
+.fabs .fab.fd-item.on{ background: var(--accent-soft); color: var(--accent-ink); }
+body:has(.ed .ed-status) .bd-win{ bottom: 126px; }
