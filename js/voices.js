@@ -25,12 +25,19 @@
   async function upload(pid, vid){
     const f = await T.pickFile('audio/*,.m4a,.mp3,.wav,.ogg,.webm,.aac'); if (!f) return;
     T.toast('Guardando ' + f.name + '…');
-    const ref = await T.Assets.upload(f); if (!ref) return;
-    addClip(pid, vid, { ref, name: f.name.replace(/\.[^.]+$/, ''), at: Date.now() });
+    const ref = await saveAudio(f); if (!ref) return;
+    const clean = f.name.replace(/\.[^.]+$/, ''); const nm = /^(SaveClip|WhatsApp|AUD|PTT|Gravação|Recording|audio|voice)/i.test(clean) || clean.length > 40 ? 'Áudio ' + new Date().toLocaleDateString('pt-BR') : clean;
+    addClip(pid, vid, { ref, name: nm, at: Date.now() });
+  }
+  // áudio: a nuvem das páginas do claude.ai não aceita arquivos de som, então ele fica guardado neste computador (no navegador)
+  async function saveAudio(f){
+    if (T.BigFiles?.saveLocal) { try { return await T.BigFiles.saveLocal(f); } catch (e) { console.warn(e); } }
+    const ref = await T.Assets.upload(f); if (ref) return ref;
+    T.toast('Não consegui guardar o áudio neste navegador. Veja se há espaço livre no computador e tente de novo.'); return null;
   }
   function addClip(pid, vid, clip){
     const list = listOf(pid); const v = list.find(x => x.id === vid); if (!v) return;
-    v.clips = (v.clips || []).concat([clip]); saveList(pid, list); T.toast('Voz de ' + v.name + ' guardada.');
+    v.clips = (v.clips || []).concat([clip]); saveList(pid, list); T.toast('Voz de ' + v.name + ' guardada' + (clip.ref?.local ? ' neste computador.' : '.'));
   }
   async function record(pid, vid){
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { T.toast('Este navegador não grava áudio. Grave no celular e suba o arquivo.'); return; }
@@ -49,7 +56,7 @@
       stream.getTracks().forEach(t => t.stop());
       const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
       const f = new File([blob], 'voz-' + new Date().toISOString().slice(0, 10) + '.webm', { type: blob.type });
-      const ref = await T.Assets.upload(f); if (ref) addClip(pid, vid, { ref, name: 'Gravação ' + new Date().toLocaleDateString('pt-BR'), at: Date.now() });
+      const ref = await saveAudio(f); if (ref) addClip(pid, vid, { ref, name: 'Gravação ' + new Date().toLocaleDateString('pt-BR'), at: Date.now() });
     };
     rec.start();
   }
@@ -122,7 +129,7 @@
         const nameIn = h('input.input', { placeholder: 'Nome do personagem', list: 'vc-names', onkeydown: (e) => { if (e.key === 'Enter') add(); } });
         const add = () => { const n = nameIn.value.trim(); if (!n) { nameIn.focus(); return; } newVoice(pid, n); nameIn.value = ''; };
         v.replaceChildren(
-          h('div.vc-head', h('div', h('h2', 'Biblioteca de vozes'), h('p.muted', 'Suba um áudio seu falando como cada personagem fala. Depois, no texto, clique no nome dele para ouvir e lembrar como ele soa.'))),
+          h('div.vc-head', h('div', h('h2', 'Biblioteca de vozes'), h('p.muted', 'Suba um áudio seu falando como cada personagem fala. Depois, no texto, clique no nome dele para ouvir e lembrar como ele soa. Os áudios ficam guardados neste computador (no navegador); em outro computador, suba de novo.'))),
           h('div.vc-add.glass', icon('person'), nameIn, h('datalist#vc-names', missing.map(n => h('option', { value: n }))), h('button.btn.primary', { type: 'button', onclick: add }, icon('plus'), 'Adicionar personagem')),
           missing.length ? h('div.vc-sugg', h('span.muted', 'Da sua Wiki: '), missing.slice(0, 12).map(n => h('button.chip', { type: 'button', onclick: () => newVoice(pid, n) }, '+ ' + n))) : null,
           list.length ? h('div.vc-grid', list.map(card)) : h('div.vc-empty.glass', h('b', 'Nenhuma voz ainda'), h('span', 'Adicione um personagem acima e suba um áudio (MP3, M4A, WAV, OGG ou WEBM).')));

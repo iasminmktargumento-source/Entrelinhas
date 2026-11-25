@@ -150,7 +150,7 @@
       async function pick(){
         const f = await T.pickFile('audio/*,.m4a,.mp3,.wav,.ogg,.webm'); if (!f) return;
         let ref = null;
-        if (f.size < 19.5 * 1024 * 1024) { T.toast('Enviando ' + f.name + '…'); const a = await T.Assets.ready(); if (a) { try { const r = await a.upload(f); ref = { id: r.id, url: r.url || ('/_blob/' + r.id), kind: 'audio', name: f.name }; } catch (e) { ref = null; } } }
+        // a nuvem das páginas não aceita áudio: a gravação fica neste computador
         if (!ref) { try { ref = await T.BigFiles.saveLocal(f); T.toast('Gravação guardada neste computador.'); } catch (e) { T.toast('Não consegui guardar a gravação.'); return; } }
         S().update(it.id, { meta: { rec: ref } }); draw();
       }
