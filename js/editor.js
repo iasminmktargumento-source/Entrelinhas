@@ -624,7 +624,24 @@
       }
 
       /* ----- modos ----- */
-      function setMode(m){ save.flush(); mode = m; tab.mode = m; T.emit('tab-changed', tab); applyMode(); buildTools(); setTimeout(() => placeCaretEnd(true), 30); }
+      function setMode(m){
+        save.flush();
+        // guarda onde você estava (cursor e o trecho que aparecia na tela) para voltar ao mesmo lugar no novo modo
+        // posição como nó + deslocamento (um Range "vivo" se perderia quando o texto troca de lugar na tela)
+        const sl = getSelection(); const src = (sl.rangeCount && prose.contains(sl.anchorNode)) ? sl.getRangeAt(0) : (lastPos && prose.contains(lastPos.n) ? null : null);
+        const kp = src ? { n: src.startContainer, o: src.startOffset } : (lastPos && prose.contains(lastPos.n) ? lastPos : null);
+        const keep = kp ? 1 : null;
+        let anchorEl = null; if (!kp) { const er = (mode === 'book' ? bookEls?.stage : scroll)?.getBoundingClientRect(); if (er) anchorEl = [...prose.querySelectorAll('section > p, section > h1, section > h2')].find(p => p.getBoundingClientRect().bottom > er.top + 40) || null; }
+        mode = m; tab.mode = m; T.emit('tab-changed', tab); applyMode(); buildTools();
+        const reveal = () => {
+          let kr = null; if (kp && prose.contains(kp.n)) { kr = document.createRange(); try { kr.setStart(kp.n, Math.min(kp.o, kp.n.nodeType === 3 ? kp.n.length : kp.n.childNodes.length)); } catch (e) { kr.selectNodeContents(kp.n); } kr.collapse(true); prose.focus({ preventScroll: true }); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(kr); }
+          if (mode === 'book') { if (keep) bookFollowCaret(); else if (anchorEl) { const r = anchorEl.getBoundingClientRect(); measureBook && measureBook(); const col = colOfRect(r); const want = geo?.single ? col : (OR() ? Math.floor((col + 1) / 2) : Math.floor(col / 2)); go(want, false); } return; }
+          if (mode === 'tw') { requestAnimationFrame(twFollow); return; }
+          const r = kr ? (caretRect() || (kp.n.nodeType === 3 ? kp.n.parentElement : kp.n).getBoundingClientRect()) : anchorEl?.getBoundingClientRect(); if (!r) return;
+          const sr = scroll.getBoundingClientRect(); scroll.scrollTop += (r.top - sr.top) - (keep ? sr.height * .4 : 60);
+        };
+        setTimeout(reveal, 40); setTimeout(() => { if (mode === 'book' && keep) bookFollowCaret(); }, 400);
+      }
       let twEls = null, bookEls = null, resizeObs = null;
       function applyMode(){
         ed.className = 'ed mode-' + mode;
@@ -1248,7 +1265,9 @@
         setTimeout(() => anchor.remove(), 50);
       });
       prose.addEventListener('mouseover', (e) => { const c = e.target.closest && e.target.closest('.cmt'); if (c) showCommentTip(c); });
+      let lastPos = null;
       const onSel = () => {
+        { const sl = getSelection(); if (sl.rangeCount && prose.contains(sl.anchorNode)) { const r0 = sl.getRangeAt(0); lastPos = { n: r0.startContainer, o: r0.startOffset }; } }
         { const lb = tools.querySelector('.st-btn .lbl'); if (lb) { const b = curBlock(); if (b !== null || document.activeElement === prose) { const k = b?.dataset?.st || ''; const nm = (PSTYLES.find(x => x[0] === k) || PSTYLES[0])[1]; if (lb.textContent !== nm) lb.textContent = nm; } } }
         if (destroyed) return;
         const sel = getSelection();
