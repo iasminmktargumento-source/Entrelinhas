@@ -1942,6 +1942,7 @@
       prose.addEventListener('input', decorate);
       prose.addEventListener('input', protectSoon);
       prose.addEventListener('input', drawMarksSoon);
+      prose.addEventListener('input', () => T.emit('writing', { pid: item.pid }), { once: true });
       // biblioteca de vozes: nomes com voz ficam sublinhados; clicar no nome mostra "▶ Ouvir"
       const VCH = (window.CSS && CSS.highlights && window.Highlight) ? new Highlight() : null;
       const drawVoices = () => { if (!VCH || destroyed || !T.Voices) return; VCH.clear(); T.Voices.ranges(item.pid, prose).forEach(r => VCH.add(r)); CSS.highlights.set('vc-name', VCH); };

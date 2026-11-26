@@ -191,3 +191,21 @@
     return wrap;
   };
 })(window.T);
+
+/* notificação no estilo do iPhone (banner que desce do topo) */
+(() => {
+  const { h, icon } = T;
+  let stack = null;
+  T.notify = (o = {}) => {
+    if (!stack) { stack = h('div.ios-stack', { 'aria-live': 'polite' }); document.body.appendChild(stack); }
+    const close = () => { card.classList.add('out'); setTimeout(() => card.remove(), 320); };
+    const card = h('div.ios-note', { role: 'alertdialog', 'aria-label': o.title || 'Aviso' },
+      h('div.ios-top', h('span.ios-app', o.emoji ? h('span.ios-emoji', o.emoji) : icon(o.icon || 'feather')), h('span.ios-appname', 'ENTRELINHAS'), h('span.ios-time', 'agora')),
+      o.title ? h('b.ios-title', o.title) : null,
+      o.body ? h('div.ios-body', o.body) : null,
+      h('div.ios-acts', (o.actions || [{ label: 'Ok', primary: true }]).map(a => h('button.ios-btn' + (a.primary ? '.primary' : ''), { type: 'button', onclick: () => { close(); a.fn && a.fn(); } }, a.label))));
+    stack.appendChild(card);
+    if (o.ms) setTimeout(close, o.ms);
+    return { close };
+  };
+})();

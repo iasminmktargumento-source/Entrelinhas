@@ -1207,6 +1207,30 @@
     else { const p = s.pauses[s.pauses.length - 1]; if (p && !p.end) p.end = Date.now(); s.runAt = Date.now(); T.toast('Sprint retomado.'); }
     spSave(); Shell.renderTop();
   }
+  // lembretes ao escrever: a frase do dia (uma vez por dia) e a sugestão de ligar o Sprint
+  const MOTTO = 'Para escrever você precisa de Felicidade, Disciplina e Confiança!';
+  T.on('writing', () => {
+    const pr = S().prefs(); const today = T.today();
+    if (pr.mottoOn !== false && pr.mottoDay !== today && !document.querySelector('.ios-note.motto')) {
+      const n = T.notify({ emoji: '✨', title: 'Lembrete do dia', body: MOTTO, actions: [{ label: 'Ok', primary: true, fn: () => S().setPrefs({ mottoDay: today }) }] });
+      document.querySelector('.ios-stack .ios-note:last-child')?.classList.add('motto'); void n;
+    }
+  });
+  let typedNoSprint = 0, sprintAskAt = 0;
+  T.on('words-delta', (e) => {
+    if (!e || e.delta <= 0 || Shell.sprint) { if (Shell.sprint) typedNoSprint = 0; return; }
+    typedNoSprint += e.delta;
+    const pr = S().prefs(); const today = T.today();
+    if (pr.sprintTip === false || pr.sprintTipOff === today) return;
+    if (typedNoSprint < 30 || Date.now() - sprintAskAt < 2 * 3600e3 || document.querySelector('.ios-note.sprint-tip')) return;
+    sprintAskAt = Date.now();
+    T.notify({ emoji: '⏱️', title: 'Escrevendo agora?', body: 'Ative a ferramenta Sprint para registrar por quanto tempo você escreveu!', actions: [
+      { label: 'Hoje não', fn: () => S().setPrefs({ sprintTipOff: today }) },
+      { label: 'Agora não' },
+      { label: 'Começar sprint', primary: true, fn: () => { const b = document.querySelector('.fd-sprint, .fabs .fd-item:not(.fd-buddy):not(.fd-postit)') || [...document.querySelectorAll('.top button')].find(x => /Sprint/.test(x.textContent)); if (b) sprintMenu(b); else startSprint(25); } },
+    ] });
+    document.querySelector('.ios-stack .ios-note:last-child')?.classList.add('sprint-tip');
+  });
   // canto de baixo: o companheiro (sempre que houver livro aberto) e, no modo foco, o Sprint
   T.on('buddy-changed', () => { try { Shell.renderFocusDock(); } catch (e) {} });
   Shell.renderFocusDock = function(){
